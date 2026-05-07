@@ -25,6 +25,29 @@ local function FlagsToAlertType(flags)
     return #parts > 0 and table.concat(parts, "_") or "none"
 end
 
+-- Attach a hover tooltip to an AceGUI widget.
+-- Hooks the outer frame plus interactive children (Dropdown button, Slider thumb)
+-- so the tip reliably fires regardless of which element the cursor lands on.
+local function AddTooltip(widget, title, body)
+    local function showTip(self)
+        GameTooltip:SetOwner(self, "ANCHOR_TOPLEFT")
+        GameTooltip:SetText(title, 1, 1, 1)
+        if body then GameTooltip:AddLine(body, 0.8, 0.8, 0.8, true) end
+        GameTooltip:Show()
+    end
+    local function hideTip() GameTooltip:Hide() end
+    widget.frame:SetScript("OnEnter", showTip)
+    widget.frame:SetScript("OnLeave", hideTip)
+    if widget.button then   -- Dropdown toggle button eats mouse before outer frame
+        widget.button:HookScript("OnEnter", showTip)
+        widget.button:HookScript("OnLeave", hideTip)
+    end
+    if widget.slider then   -- Slider thumb eats mouse before outer frame
+        widget.slider:HookScript("OnEnter", showTip)
+        widget.slider:HookScript("OnLeave", hideTip)
+    end
+end
+
 -- -------------------------------------------------------
 -- Called from Core.lua:OnInitialize
 -- -------------------------------------------------------
@@ -387,6 +410,7 @@ local function BuildPanel(MK)
         MK.db.profile.chatOutput = val
     end)
     outerScroll:AddChild(chatChk)
+    AddTooltip(chatChk, "Chat Output", "Print a message to chat when a milestone is crossed.")
 
     -- Frame alert toggle
     local frameChk = AG:Create("CheckBox")
@@ -397,6 +421,39 @@ local function BuildPanel(MK)
         MK.db.profile.frameAlerts = val
     end)
     outerScroll:AddChild(frameChk)
+    AddTooltip(frameChk, "On-Screen Frame Alerts", "Show a large banner on screen when a milestone is crossed.")
+
+    -- Forces display: decimal places
+    local decimalDrop = AG:Create("Dropdown")
+    decimalDrop:SetLabel("Forces display")
+    decimalDrop:SetWidth(230)
+    decimalDrop:SetList(
+        {
+            ["0"] = "Whole number  (85%)",
+            ["1"] = "One decimal  (84.9%)",
+            ["2"] = "Two decimals  (84.94%)",
+        },
+        { "0", "1", "2" }
+    )
+    decimalDrop:SetValue(tostring(MK.db.profile.options.forcesDecimals or 1))
+    decimalDrop:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.forcesDecimals = tonumber(val)
+    end)
+    outerScroll:AddChild(decimalDrop)
+    AddTooltip(decimalDrop, "Forces Decimal Places",
+        "How many decimal places to show for forces % in alerts.\nHas no effect when 'Nominal forces' is enabled.")
+
+    -- Forces display: nominal count instead of percent
+    local nominalChk = AG:Create("CheckBox")
+    nominalChk:SetLabel("Nominal forces  (e.g. 382/450 instead of 84.9%)")
+    nominalChk:SetFullWidth(true)
+    nominalChk:SetValue(MK.db.profile.options.showNominalForces)
+    nominalChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.showNominalForces = val
+    end)
+    outerScroll:AddChild(nominalChk)
+    AddTooltip(nominalChk, "Nominal Forces",
+        "Show raw enemy count (e.g. 382/450) instead of a\npercentage in chat and frame alerts.")
 
     -- Alert frame opacity slider
     local alphaSlider = AG:Create("Slider")
@@ -410,6 +467,8 @@ local function BuildPanel(MK)
         if af then af:SetAlpha(val) end
     end)
     outerScroll:AddChild(alphaSlider)
+    AddTooltip(alphaSlider, "Alert Frame Opacity",
+        "Transparency of the on-screen alert banner.\n0.2 = nearly invisible  •  1.0 = fully opaque.")
 
     -- Minimap button toggle
     local minimapChk = AG:Create("CheckBox")
@@ -427,6 +486,7 @@ local function BuildPanel(MK)
         end
     end)
     outerScroll:AddChild(minimapChk)
+    AddTooltip(minimapChk, "Minimap Button", "Toggle the MilestoneKeys icon on the minimap.")
 
     -- Per-dungeon profiles toggle
     local perDungeonChk = AG:Create("CheckBox")
@@ -437,6 +497,8 @@ local function BuildPanel(MK)
         MK.db.profile.options.perDungeonProfiles = val
     end)
     outerScroll:AddChild(perDungeonChk)
+    AddTooltip(perDungeonChk, "Per-Dungeon Profiles",
+        "Store a separate milestone set for each dungeon.\nThe profile selected above is used during that dungeon's run.")
 
     -- Party sync toggle
     local syncChk = AG:Create("CheckBox")
@@ -447,6 +509,8 @@ local function BuildPanel(MK)
         MK.db.profile.options.partySync = val
     end)
     outerScroll:AddChild(syncChk)
+    AddTooltip(syncChk, "Party Sync",
+        "Send a party chat message via MKSYNV1 prefix\nwhen you cross a milestone threshold.")
 
     -- Predictive alerts toggle
     local predictChk = AG:Create("CheckBox")
@@ -457,6 +521,8 @@ local function BuildPanel(MK)
         MK.db.profile.options.predictiveAlerts = val
     end)
     outerScroll:AddChild(predictChk)
+    AddTooltip(predictChk, "MDT Predictive Alerts",
+        "Warn in chat when the next MDT pull will push you\npast a milestone threshold. Requires MDT.")
 
     -- Test button
     local sep4 = AG:Create("Heading")
@@ -480,7 +546,7 @@ local function BuildPanel(MK)
     -- ====================================================
     -- SECTION: MDT Route Import  (Predict.lua)
     -- ====================================================
-    refreshMDTRoutes = MK_Predict_BuildUI(MK, outerScroll, function() return selectedMapID end)
+    refreshMDTRoutes = MK_Predict_BuildUI(MK, outerScroll, function() return selectedMapID end, function() RebuildList() end)
 
     -- ── Close cleans up reference ──────────────────────
     frame:SetCallback("OnClose", function(widget)

@@ -29,6 +29,8 @@ local DB_DEFAULTS = {
             perDungeonProfiles = false,
             partySync          = false,
             predictiveAlerts   = false,
+            forcesDecimals     = 1,
+            showNominalForces  = false,
         },
         minimapPos      = {},  -- LibDBIcon writes position here
         alertFramePos   = nil, -- { point, x, y } saved when locked; nil = centered
@@ -167,7 +169,7 @@ function MK:EvaluateForces()
             and pct >= milestone.threshold
         then
             State.triggered[i] = true
-            MK_TriggerAlert(milestone, pct, State.keystoneLevel)
+            MK_TriggerAlert(milestone, pct, State.keystoneLevel, info.quantity, info.totalQuantity)
             MK_Sync_Broadcast(milestone)
         end
     end

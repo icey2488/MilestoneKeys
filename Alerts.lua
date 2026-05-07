@@ -209,10 +209,21 @@ local function hasAlert(aType, flag)
     return aType and aType:find(flag, 1, true) ~= nil
 end
 
-function MK_TriggerAlert(milestone, currentPct, keystoneLevel)
+-- quantity/total are the raw C_Scenario values; nil when called from /mk test.
+function MK_TriggerAlert(milestone, currentPct, keystoneLevel, quantity, total)
     local MK      = _G["MilestoneKeys"]
     local profile = MK.db.profile
     local aType   = milestone.alertType or "sound_chat"
+    local opts    = profile.options
+
+    -- Build a forces string once, shared by chat and frame output.
+    local forcesStr
+    if opts.showNominalForces and quantity and total then
+        forcesStr = string.format("%d/%d forces", quantity, total)
+    else
+        local dec = opts.forcesDecimals or 1
+        forcesStr = string.format("%." .. dec .. "f%% forces", currentPct)
+    end
 
     -- ── Sound ────────────────────────────────────────────
     if hasAlert(aType, "sound") then
@@ -223,9 +234,9 @@ function MK_TriggerAlert(milestone, currentPct, keystoneLevel)
     -- ── Chat ─────────────────────────────────────────────
     if hasAlert(aType, "chat") and profile.chatOutput then
         local msg = string.format(
-            "|cffF5B80E[MilestoneKeys]|r |cffFFFFFF%s|r — |cff00FF96%.1f%%|r forces (+%d)",
+            "|cffF5B80E[MilestoneKeys]|r |cffFFFFFF%s|r — |cff00FF96%s|r (+%d)",
             milestone.label,
-            currentPct,
+            forcesStr,
             keystoneLevel
         )
         print(msg)
@@ -235,7 +246,7 @@ function MK_TriggerAlert(milestone, currentPct, keystoneLevel)
     if hasAlert(aType, "frame") and profile.frameAlerts then
         local f = GetAlertFrame()
         f.title:SetText(milestone.label)
-        f.sub:SetText(string.format("%.1f%% Enemy Forces  •  +%d Key", currentPct, keystoneLevel))
+        f.sub:SetText(string.format("%s  •  +%d Key", forcesStr, keystoneLevel))
         f.anim:Stop()
         f.anim:Play()
     end

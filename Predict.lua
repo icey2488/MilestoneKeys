@@ -140,7 +140,7 @@ end
 -- Returns a refresh function the caller invokes when the
 -- selected dungeon changes.
 -- -------------------------------------------------------
-function MK_Predict_BuildUI(MK, frame, getSelectedMapID)
+function MK_Predict_BuildUI(MK, frame, getSelectedMapID, onMilestoneAdded)
     local AG  = LibStub("AceGUI-3.0")
     local MDT = GetMDT()
 
@@ -253,6 +253,7 @@ function MK_Predict_BuildUI(MK, frame, getSelectedMapID)
         local label     = string.format("Pull %d (~%d%%)", selectedPull, threshold)
         if MK:AddMilestone(threshold, label, "sound_chat", mapID) then
             print(string.format("|cffF5B80E[MilestoneKeys]|r Added: |cff00FF96%s|r", label))
+            if onMilestoneAdded then onMilestoneAdded() end
         else
             print(string.format(
                 "|cffF5B80E[MilestoneKeys]|r Milestone at |cff00FF96%d%%|r already exists.",

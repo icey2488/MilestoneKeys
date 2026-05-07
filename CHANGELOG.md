@@ -2,6 +2,21 @@
 
 ## [Unreleased]
 
+## [1.0.3] - 2026-05-07
+### Added
+- Milestone rows now have independent Sound / Chat / Frame checkboxes instead of a single dropdown, with All and None buttons for quick selection.
+- Forces display options: configurable decimal places (0, 1, or 2) and a "Nominal forces" mode (e.g. 382/450 instead of 84.9%).
+- Hover tooltips on all Settings options for extra context.
+
+### Fixed
+- "Calculate & Add" (MDT route import) now immediately updates the Milestones list without requiring the panel to be closed and reopened.
+- Sound preview "Play" buttons now render correctly (replaced unrenderable UTF-8 glyph).
+
+## [1.0.2] - 2026-05-07
+### Fixed
+- Milestone rows: alert type dropdown replaced with Sound/Chat/Frame checkboxes.
+- Alert type now stored as a substring-based string, backward-compatible with existing saved data.
+
 ## [1.0.1] - 2026-05-07
 ### Fixed
 - MDT route import now correctly reads saved routes.
