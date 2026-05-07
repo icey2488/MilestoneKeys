@@ -217,17 +217,9 @@ function MK_TriggerAlert(milestone, currentPct, keystoneLevel, quantity, total)
     local opts    = profile.options
 
     -- Build a forces string once, shared by chat and frame output.
-    -- When called from /mk test, quantity/total are nil; derive plausible
-    -- stand-ins so nominal mode renders something useful (e.g. "42/100").
-    local forcesStr
-    local q = quantity or math.floor(currentPct)
-    local t = total or 100
-    if opts.showNominalForces then
-        forcesStr = string.format("%d/%d forces", q, t)
-    else
-        local dec = opts.forcesDecimals or 1
-        forcesStr = string.format("%." .. dec .. "f%% forces", currentPct)
-    end
+    -- When called from /mk test, quantity/total are nil; MK_FormatForces
+    -- derives stand-ins from currentPct (e.g. 42/100 in nominal mode).
+    local forcesStr = MK_FormatForces(currentPct, quantity, total)
 
     -- ── Sound ────────────────────────────────────────────
     if hasAlert(aType, "sound") then

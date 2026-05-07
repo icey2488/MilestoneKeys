@@ -76,8 +76,9 @@ function MK_Minimap_Init(MK)
         OnTooltipShow = function(tt)
             tt:AddLine("|cffF5B80EMilestoneKeys|r")
             if MK:IsRunActive() then
+                local pct, q, t = MK:GetCurrentForcesInfo()
                 tt:AddLine(
-                    string.format("Forces: |cff00FF96%.1f%%|r", MK:GetCurrentForcesPercent()),
+                    string.format("Forces: |cff00FF96%s|r", MK_FormatForces(pct, q, t)),
                     1, 1, 1
                 )
             else

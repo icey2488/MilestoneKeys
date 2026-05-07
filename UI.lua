@@ -265,7 +265,7 @@ local function BuildPanel(MK)
 
             local chatChk = AG:Create("CheckBox")
             chatChk:SetLabel("Chat")
-            chatChk:SetWidth(55)
+            chatChk:SetWidth(50)
             chatChk:SetValue(flags.chat)
             chatChk:SetCallback("OnValueChanged", function(_, _, val)
                 flags.chat = val
@@ -275,7 +275,7 @@ local function BuildPanel(MK)
 
             local frmChk = AG:Create("CheckBox")
             frmChk:SetLabel("Frame")
-            frmChk:SetWidth(65)
+            frmChk:SetWidth(58)
             frmChk:SetValue(flags.frame)
             frmChk:SetCallback("OnValueChanged", function(_, _, val)
                 flags.frame = val
@@ -295,7 +295,7 @@ local function BuildPanel(MK)
 
             local noneBtn = AG:Create("Button")
             noneBtn:SetText("None")
-            noneBtn:SetWidth(56)
+            noneBtn:SetWidth(70)
             noneBtn:SetCallback("OnClick", function()
                 flags.sound = false; flags.chat = false; flags.frame = false
                 sndChk:SetValue(false); chatChk:SetValue(false); frmChk:SetValue(false)
@@ -390,6 +390,7 @@ local function BuildPanel(MK)
     local soundChkMap = {}
 
     for _, snd in ipairs(SOUND_LIST) do
+        local k   = snd.key  -- explicit per-iteration capture for closures
         local row = AG:Create("SimpleGroup")
         row:SetLayout("Flow")
         row:SetFullWidth(true)
@@ -397,23 +398,23 @@ local function BuildPanel(MK)
 
         local chk = AG:Create("CheckBox")
         chk:SetLabel(snd.label)
-        chk:SetValue(MK.db.profile.alertSound == snd.key)
+        chk:SetValue(MK.db.profile.alertSound == k)
         chk:SetWidth(185)
         chk:SetCallback("OnValueChanged", function(_, _, val)
             if not val then chk:SetValue(true); return end
-            MK.db.profile.alertSound = snd.key
-            for k, c in pairs(soundChkMap) do
-                if k ~= snd.key then c:SetValue(false) end
+            MK.db.profile.alertSound = k
+            for key, c in pairs(soundChkMap) do
+                if key ~= k then c:SetValue(false) end
             end
         end)
-        soundChkMap[snd.key] = chk
+        soundChkMap[k] = chk
         row:AddChild(chk)
 
         local playBtn = AG:Create("Button")
         playBtn:SetText("Play")
         playBtn:SetWidth(60)
         playBtn:SetCallback("OnClick", function()
-            local id = MK_GetSoundID(snd.key) or (SOUNDKIT and SOUNDKIT.UI_RAID_WARNING) or 567478
+            local id = MK_GetSoundID(k) or (SOUNDKIT and SOUNDKIT.UI_RAID_WARNING) or 567478
             PlaySound(id, "Master")
         end)
         row:AddChild(playBtn)
@@ -441,37 +442,26 @@ local function BuildPanel(MK)
     outerScroll:AddChild(frameChk)
     AddTooltip(frameChk, "On-Screen Frame Alerts", "Show a large banner on screen when a milestone is crossed.")
 
-    -- Forces display: decimal places
-    local decimalDrop = AG:Create("Dropdown")
-    decimalDrop:SetLabel("Forces display")
-    decimalDrop:SetWidth(230)
-    decimalDrop:SetList(
+    -- Forces display: single dropdown covering all format options
+    local displayDrop = AG:Create("Dropdown")
+    displayDrop:SetLabel("Forces display")
+    displayDrop:SetWidth(240)
+    displayDrop:SetList(
         {
-            ["0"] = "Whole number  (85%)",
-            ["1"] = "One decimal  (84.9%)",
-            ["2"] = "Two decimals  (84.94%)",
+            ["pct_0"]   = "Percentage  (85%)",
+            ["pct_1"]   = "Percentage  (84.9%)",
+            ["pct_2"]   = "Percentage  (84.94%)",
+            ["nominal"] = "Nominal  (382/450)",
         },
-        { "0", "1", "2" }
+        { "pct_0", "pct_1", "pct_2", "nominal" }
     )
-    decimalDrop:SetValue(tostring(MK.db.profile.options.forcesDecimals or 1))
-    decimalDrop:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.options.forcesDecimals = tonumber(val)
+    displayDrop:SetValue(MK.db.profile.options.forcesDisplayMode or "pct_0")
+    displayDrop:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.forcesDisplayMode = val
     end)
-    outerScroll:AddChild(decimalDrop)
-    AddTooltip(decimalDrop, "Forces Decimal Places",
-        "How many decimal places to show for forces % in alerts.\nHas no effect when 'Nominal forces' is enabled.")
-
-    -- Forces display: nominal count instead of percent
-    local nominalChk = AG:Create("CheckBox")
-    nominalChk:SetLabel("Nominal forces  (e.g. 382/450 instead of 84.9%)")
-    nominalChk:SetFullWidth(true)
-    nominalChk:SetValue(MK.db.profile.options.showNominalForces)
-    nominalChk:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.options.showNominalForces = val
-    end)
-    outerScroll:AddChild(nominalChk)
-    AddTooltip(nominalChk, "Nominal Forces",
-        "Show raw enemy count (e.g. 382/450) instead of a\npercentage in chat and frame alerts.")
+    outerScroll:AddChild(displayDrop)
+    AddTooltip(displayDrop, "Forces Display",
+        "How forces are shown in alerts and tooltips.\nNominal: raw count (e.g. 382/450). Percentage: e.g. 84.9%.")
 
     -- Alert frame opacity slider
     local alphaSlider = AG:Create("Slider")

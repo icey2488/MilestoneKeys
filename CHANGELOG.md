@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [1.0.5] - 2026-05-07
+### Added
+- Forces display consolidated into a single dropdown: Percentage (85%), Percentage (84.9%), Percentage (84.94%), Nominal (382/450). Replaces the separate "decimal places" dropdown and "Nominal forces" checkbox.
+- `MK_FormatForces(pct, quantity, total)` in Core.lua is now the single source of truth for forces formatting, applied in alerts, frame subtitle, and minimap tooltip.
+
+### Fixed
+- Sound preview Play buttons now capture their key per-iteration via `local k = snd.key` to avoid potential Lua closure scoping issues in the loop.
+- "None" button on milestone rows widened to 70 px (was 56 px) so the full label renders without truncation.
+- Minimap tooltip Forces line now respects the selected Forces display mode (was hardcoded to 1 decimal).
+
 ## [1.0.4] - 2026-05-07
 ### Added
 - Column headers ("On", "Forces %", "Label", "Alerts") above the milestone list, styled in gold with GameFontNormalSmall.

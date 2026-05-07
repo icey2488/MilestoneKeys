@@ -29,8 +29,7 @@ local DB_DEFAULTS = {
             perDungeonProfiles = false,
             partySync          = false,
             predictiveAlerts   = false,
-            forcesDecimals     = 1,
-            showNominalForces  = false,
+            forcesDisplayMode  = "pct_0",  -- pct_0, pct_1, pct_2, nominal
         },
         minimapPos      = {},  -- LibDBIcon writes position here
         alertFramePos   = nil, -- { point, x, y } saved when locked; nil = centered
@@ -48,6 +47,8 @@ local State = {
     forcesIndex          = nil,
     triggered            = {},
     lastPct              = 0,
+    lastQuantity         = 0,
+    lastTotal            = 0,
 }
 
 -- -------------------------------------------------------
@@ -159,7 +160,9 @@ function MK:EvaluateForces()
     if not info or info.totalQuantity == 0 then return end
 
     local pct = (info.quantity / info.totalQuantity) * 100
-    State.lastPct = pct
+    State.lastPct      = pct
+    State.lastQuantity = info.quantity
+    State.lastTotal    = info.totalQuantity
 
     local milestones = self:GetActiveDungeonProfile()
 
@@ -204,6 +207,10 @@ end
 -- -------------------------------------------------------
 function MK:GetCurrentForcesPercent()
     return State.lastPct
+end
+
+function MK:GetCurrentForcesInfo()
+    return State.lastPct, State.lastQuantity, State.lastTotal
 end
 
 function MK:IsRunActive()
@@ -268,6 +275,25 @@ function MK:SortMilestones(mapID)
     table.sort(self:GetMilestones(mapID), function(a, b)
         return a.threshold < b.threshold
     end)
+end
+
+-- -------------------------------------------------------
+-- Forces formatting  (single source of truth)
+-- -------------------------------------------------------
+function MK_FormatForces(pct, quantity, total)
+    local MK_   = _G["MilestoneKeys"]
+    local mode  = MK_.db.profile.options.forcesDisplayMode or "pct_1"
+    if mode == "nominal" then
+        local q = quantity or math.floor(pct)
+        local t = total or 100
+        return string.format("%d/%d forces", q, t)
+    elseif mode == "pct_0" then
+        return string.format("%.0f%% forces", pct)
+    elseif mode == "pct_2" then
+        return string.format("%.2f%% forces", pct)
+    else  -- pct_1
+        return string.format("%.1f%% forces", pct)
+    end
 end
 
 -- Expose the addon object globally so UI/Alerts/Sync/Predict can reference it
