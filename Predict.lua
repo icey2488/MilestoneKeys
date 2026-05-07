@@ -9,10 +9,11 @@
 --
 -- MDT storage (confirmed from MDT source):
 --   MDT.mapInfo[dungeonIdx].mapID    = WoW challengeMapID
---   MDT.db.global.presets[dungeonIdx][presetIdx].text
---   MDT.db.global.presets[dungeonIdx][presetIdx].value.pulls
---   pulls[pullIdx][enemyIdx] = { cloneIdx, ... }
---   MDT.dungeonEnemies[dungeonIdx][enemyIdx].count = forces per clone
+--   MDT:GetDB().presets[dungeonIdx][presetIdx].text
+--   MDT:GetDB().presets[dungeonIdx][presetIdx].value.pulls
+--   pulls[pullIdx][enemyIdx] = { cloneIdx, ... }  (keys are strings)
+--   MDT.dungeonEnemies[dungeonIdx][enemyIdx].count  = forces per kill
+--   MDT.dungeonEnemies[dungeonIdx][enemyIdx].clones = all instances in dungeon
 -- ============================================================
 
 function MK_Predict_Init(MK)
@@ -59,6 +60,20 @@ local function GetActivePreset(MDT, dungeonIdx)
     return presets[idx]
 end
 
+-- Total dungeon forces = sum of enemy.count * #enemy.clones for all enemies.
+-- MDT has no public GetDungeonTotalCount(); we compute it from dungeonEnemies.
+local function GetDungeonTotal(MDT, dungeonIdx)
+    local enemies = MDT.dungeonEnemies and MDT.dungeonEnemies[dungeonIdx]
+    if not enemies then return nil end
+    local total = 0
+    for _, enemy in pairs(enemies) do
+        if type(enemy) == "table" and enemy.count and enemy.clones then
+            total = total + enemy.count * #enemy.clones
+        end
+    end
+    return total > 0 and total or nil
+end
+
 -- Sum forces from pulls 1..upToPull and return as %.
 -- pulls[pullIdx][enemyIdx] = { cloneIdx, ... }  (color key is a string, skip it)
 local function CalcPullForces(MDT, dungeonIdx, preset, upToPull)
@@ -66,7 +81,7 @@ local function CalcPullForces(MDT, dungeonIdx, preset, upToPull)
     local pulls   = preset.value.pulls
     local enemies = MDT.dungeonEnemies and MDT.dungeonEnemies[dungeonIdx]
     if not enemies then return nil end
-    local total   = MDT:GetDungeonTotalCount(dungeonIdx)
+    local total   = GetDungeonTotal(MDT, dungeonIdx)
     if not total or total == 0 then return nil end
 
     local count = 0
