@@ -286,12 +286,12 @@ local function BuildPanel(MK)
     -- accounts for the button width and doesn't overlap the next widget.
     local soundGroup = AG:Create("SimpleGroup")
     soundGroup:SetLayout("Flow")
-    soundGroup:SetWidth(220)
+    soundGroup:SetWidth(245)
     outerScroll:AddChild(soundGroup)
 
     local soundDrop = AG:Create("Dropdown")
     soundDrop:SetLabel("Alert Sound")
-    soundDrop:SetWidth(180)
+    soundDrop:SetWidth(195)
     soundDrop:SetList(
         { alarm = "Alarm Horn", gong = "Gong", levelup = "Level Up" },
         { "alarm", "gong", "levelup" }
@@ -302,27 +302,15 @@ local function BuildPanel(MK)
     end)
     soundGroup:AddChild(soundDrop)
 
-    -- Native preview button parented to soundGroup so it stays within the
-    -- 220px group frame and doesn't bleed into adjacent AceGUI widgets.
-    local previewBtn = CreateFrame("Button", nil, soundGroup.frame)
-    previewBtn:SetSize(24, 24)
-    previewBtn:SetPoint("LEFT", soundDrop.frame, "RIGHT", 4, -12)
-    previewBtn:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
-    local previewHL = previewBtn:CreateTexture(nil, "HIGHLIGHT")
-    previewHL:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
-    previewHL:SetAllPoints()
-    previewHL:SetAlpha(0.6)
-    previewBtn:SetScript("OnClick", function()
+    -- AceGUI button so it lives inside soundGroup.content and receives clicks.
+    -- A native frame child of soundGroup.frame sits below the content layer.
+    local previewBtn = AG:Create("Button")
+    previewBtn:SetText("|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:16:16|t")
+    previewBtn:SetWidth(42)
+    previewBtn:SetCallback("OnClick", function()
         PlaySound(MK_GetSoundID(MK.db.profile.alertSound), "Master")
     end)
-    previewBtn:SetScript("OnEnter", function(self)
-        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
-        GameTooltip:SetText("Preview alert sound", 1, 1, 1)
-        GameTooltip:Show()
-    end)
-    previewBtn:SetScript("OnLeave", function()
-        GameTooltip:Hide()
-    end)
+    soundGroup:AddChild(previewBtn)
 
     -- Chat output toggle
     local chatChk = AG:Create("CheckBox")
