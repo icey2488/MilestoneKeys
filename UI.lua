@@ -37,15 +37,26 @@ local Panel = nil
 
 local function BuildPanel(MK)
     local selectedMapID    = nil   -- nil = global profile
-    local RebuildList      = nil   -- forward declaration (assigned below)
-    local refreshMDTRoutes = nil   -- forward declaration (assigned after MDT section)
+    local RebuildList      = nil   -- forward declaration
+    local refreshMDTRoutes = nil   -- forward declaration
 
+    -- Tracked so RebuildList can hide stale native close buttons.
+    local activeCloseBtns = {}
+
+    -- ── Outer frame ─────────────────────────────────────
     local frame = AG:Create("Frame")
     frame:SetTitle("MilestoneKeys  |cffF5B80Ev1.0|r")
     frame:SetStatusText("Set force % milestones for Mythic+ runs")
-    frame:SetWidth(560)
-    frame:SetHeight(720)
-    frame:SetLayout("Flow")
+    frame:SetWidth(540)
+    frame:SetHeight(520)
+    frame:SetLayout("Fill")
+
+    -- Single scrollable container holding all sections.
+    local outerScroll = AG:Create("ScrollFrame")
+    outerScroll:SetFullWidth(true)
+    outerScroll:SetFullHeight(true)
+    outerScroll:SetLayout("Flow")
+    frame:AddChild(outerScroll)
 
     -- ====================================================
     -- SECTION: Dungeon profile selector
@@ -53,7 +64,7 @@ local function BuildPanel(MK)
     local profileSep = AG:Create("Heading")
     profileSep:SetFullWidth(true)
     profileSep:SetText("Profile")
-    frame:AddChild(profileSep)
+    outerScroll:AddChild(profileSep)
 
     local dungeonDrop = AG:Create("Dropdown")
     dungeonDrop:SetLabel("Editing profile for")
@@ -84,7 +95,7 @@ local function BuildPanel(MK)
         if RebuildList then RebuildList() end
         if refreshMDTRoutes then refreshMDTRoutes() end
     end)
-    frame:AddChild(dungeonDrop)
+    outerScroll:AddChild(dungeonDrop)
 
     -- ====================================================
     -- SECTION: Milestones list
@@ -93,20 +104,26 @@ local function BuildPanel(MK)
     headerLabel:SetText("|cffF5B80EMilestones|r")
     headerLabel:SetFullWidth(true)
     headerLabel:SetFontObject(GameFontNormalLarge)
-    frame:AddChild(headerLabel)
+    outerScroll:AddChild(headerLabel)
 
     local sep1 = AG:Create("Heading")
     sep1:SetFullWidth(true)
     sep1:SetText("")
-    frame:AddChild(sep1)
+    outerScroll:AddChild(sep1)
 
     local scrollFrame = AG:Create("ScrollFrame")
     scrollFrame:SetFullWidth(true)
     scrollFrame:SetHeight(180)
     scrollFrame:SetLayout("Flow")
-    frame:AddChild(scrollFrame)
+    outerScroll:AddChild(scrollFrame)
 
     RebuildList = function()
+        -- Hide stale native close buttons before AceGUI releases the rows.
+        for _, btn in ipairs(activeCloseBtns) do
+            btn:Hide()
+        end
+        wipe(activeCloseBtns)
+
         scrollFrame:ReleaseChildren()
         local milestones = MK:GetMilestones(selectedMapID)
 
@@ -167,7 +184,7 @@ local function BuildPanel(MK)
             local labelBox = AG:Create("EditBox")
             labelBox:SetLabel("")
             labelBox:SetText(ms.label)
-            labelBox:SetWidth(180)
+            labelBox:SetWidth(155)
             labelBox:SetCallback("OnEnterPressed", function(_, _, val)
                 MK:UpdateMilestone(i, "label", val, selectedMapID)
                 labelBox:ClearFocus()
@@ -193,17 +210,21 @@ local function BuildPanel(MK)
             end)
             row:AddChild(alertDrop)
 
-            -- ── Delete button ─────────────────────────
-            local delBtn = AG:Create("Button")
-            delBtn:SetText("✕")
-            delBtn:SetWidth(36)
-            delBtn:SetCallback("OnClick", function()
+            scrollFrame:AddChild(row)
+
+            -- ── Delete: native UIPanelCloseButton ─────
+            -- Parented to row.frame so it scrolls with the list.
+            -- Hidden at the top of each RebuildList to avoid stale copies
+            -- persisting on pooled AceGUI frames.
+            local delBtn = CreateFrame("Button", nil, row.frame, "UIPanelCloseButton")
+            delBtn:SetSize(24, 24)
+            delBtn:SetPoint("RIGHT", row.frame, "RIGHT", -2, 0)
+            delBtn:SetScript("OnClick", function()
+                delBtn:Hide()
                 MK:RemoveMilestone(i, selectedMapID)
                 RebuildList()
             end)
-            row:AddChild(delBtn)
-
-            scrollFrame:AddChild(row)
+            table.insert(activeCloseBtns, delBtn)
         end
     end
 
@@ -213,13 +234,13 @@ local function BuildPanel(MK)
     local sep2 = AG:Create("Heading")
     sep2:SetFullWidth(true)
     sep2:SetText("Add Milestone")
-    frame:AddChild(sep2)
+    outerScroll:AddChild(sep2)
 
     local newThreshold = 50
     local sliderLabel  = AG:Create("Label")
     sliderLabel:SetText(string.format("Threshold: |cff00FF96%d%%|r", newThreshold))
     sliderLabel:SetWidth(160)
-    frame:AddChild(sliderLabel)
+    outerScroll:AddChild(sliderLabel)
 
     local slider = AG:Create("Slider")
     slider:SetSliderValues(1, 100, 1)
@@ -230,13 +251,13 @@ local function BuildPanel(MK)
         newThreshold = val
         sliderLabel:SetText(string.format("Threshold: |cff00FF96%d%%|r", val))
     end)
-    frame:AddChild(slider)
+    outerScroll:AddChild(slider)
 
     local newLabelBox = AG:Create("EditBox")
     newLabelBox:SetLabel("Label")
     newLabelBox:SetWidth(200)
     newLabelBox:SetText("My Milestone")
-    frame:AddChild(newLabelBox)
+    outerScroll:AddChild(newLabelBox)
 
     local addBtn = AG:Create("Button")
     addBtn:SetText("Add Milestone")
@@ -251,7 +272,7 @@ local function BuildPanel(MK)
             print("|cffF5B80E[MilestoneKeys]|r A milestone at |cff00FF96" .. newThreshold .. "%%|r already exists.")
         end
     end)
-    frame:AddChild(addBtn)
+    outerScroll:AddChild(addBtn)
 
     -- ====================================================
     -- SECTION: Settings
@@ -259,7 +280,7 @@ local function BuildPanel(MK)
     local sep3 = AG:Create("Heading")
     sep3:SetFullWidth(true)
     sep3:SetText("Settings")
-    frame:AddChild(sep3)
+    outerScroll:AddChild(sep3)
 
     -- Sound picker
     local soundDrop = AG:Create("Dropdown")
@@ -273,7 +294,29 @@ local function BuildPanel(MK)
     soundDrop:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.alertSound = val
     end)
-    frame:AddChild(soundDrop)
+    outerScroll:AddChild(soundDrop)
+
+    -- Sound preview button — native frame anchored beside the dropdown.
+    -- y offset -12 lines it up with the dropdown button row (below the label).
+    local previewBtn = CreateFrame("Button", nil, soundDrop.frame)
+    previewBtn:SetSize(24, 24)
+    previewBtn:SetPoint("LEFT", soundDrop.frame, "RIGHT", 4, -12)
+    previewBtn:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
+    local previewHL = previewBtn:CreateTexture(nil, "HIGHLIGHT")
+    previewHL:SetTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
+    previewHL:SetAllPoints()
+    previewHL:SetAlpha(0.6)
+    previewBtn:SetScript("OnClick", function()
+        PlaySound(MK_GetSoundID(MK.db.profile.alertSound), "Master")
+    end)
+    previewBtn:SetScript("OnEnter", function(self)
+        GameTooltip:SetOwner(self, "ANCHOR_RIGHT")
+        GameTooltip:SetText("Preview alert sound", 1, 1, 1)
+        GameTooltip:Show()
+    end)
+    previewBtn:SetScript("OnLeave", function()
+        GameTooltip:Hide()
+    end)
 
     -- Chat output toggle
     local chatChk = AG:Create("CheckBox")
@@ -283,7 +326,7 @@ local function BuildPanel(MK)
     chatChk:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.chatOutput = val
     end)
-    frame:AddChild(chatChk)
+    outerScroll:AddChild(chatChk)
 
     -- Frame alert toggle
     local frameChk = AG:Create("CheckBox")
@@ -293,7 +336,20 @@ local function BuildPanel(MK)
     frameChk:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.frameAlerts = val
     end)
-    frame:AddChild(frameChk)
+    outerScroll:AddChild(frameChk)
+
+    -- Alert frame opacity slider
+    local alphaSlider = AG:Create("Slider")
+    alphaSlider:SetLabel("Alert Frame Opacity")
+    alphaSlider:SetSliderValues(0.2, 1.0, 0.05)
+    alphaSlider:SetValue(MK.db.profile.alertFrameAlpha or 1.0)
+    alphaSlider:SetWidth(200)
+    alphaSlider:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.alertFrameAlpha = val
+        local af = MK_GetAlertFrame()
+        if af then af:SetAlpha(val) end
+    end)
+    outerScroll:AddChild(alphaSlider)
 
     -- Minimap button toggle
     local minimapChk = AG:Create("CheckBox")
@@ -310,7 +366,7 @@ local function BuildPanel(MK)
             end
         end
     end)
-    frame:AddChild(minimapChk)
+    outerScroll:AddChild(minimapChk)
 
     -- Per-dungeon profiles toggle
     local perDungeonChk = AG:Create("CheckBox")
@@ -320,7 +376,7 @@ local function BuildPanel(MK)
     perDungeonChk:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.options.perDungeonProfiles = val
     end)
-    frame:AddChild(perDungeonChk)
+    outerScroll:AddChild(perDungeonChk)
 
     -- Party sync toggle
     local syncChk = AG:Create("CheckBox")
@@ -330,7 +386,7 @@ local function BuildPanel(MK)
     syncChk:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.options.partySync = val
     end)
-    frame:AddChild(syncChk)
+    outerScroll:AddChild(syncChk)
 
     -- Predictive alerts toggle
     local predictChk = AG:Create("CheckBox")
@@ -340,13 +396,13 @@ local function BuildPanel(MK)
     predictChk:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.options.predictiveAlerts = val
     end)
-    frame:AddChild(predictChk)
+    outerScroll:AddChild(predictChk)
 
     -- Test button
     local sep4 = AG:Create("Heading")
     sep4:SetFullWidth(true)
     sep4:SetText("")
-    frame:AddChild(sep4)
+    outerScroll:AddChild(sep4)
 
     local testBtn = AG:Create("Button")
     testBtn:SetText("Test Alert  (/mk test)")
@@ -359,15 +415,19 @@ local function BuildPanel(MK)
             kLevel > 0 and kLevel or 10
         )
     end)
-    frame:AddChild(testBtn)
+    outerScroll:AddChild(testBtn)
 
     -- ====================================================
     -- SECTION: MDT Route Import  (Predict.lua)
     -- ====================================================
-    refreshMDTRoutes = MK_Predict_BuildUI(MK, frame, function() return selectedMapID end)
+    refreshMDTRoutes = MK_Predict_BuildUI(MK, outerScroll, function() return selectedMapID end)
 
     -- ── Close cleans up reference ──────────────────────
     frame:SetCallback("OnClose", function(widget)
+        for _, btn in ipairs(activeCloseBtns) do
+            btn:Hide()
+        end
+        wipe(activeCloseBtns)
         AG:Release(widget)
         Panel = nil
     end)

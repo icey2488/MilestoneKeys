@@ -6,6 +6,13 @@
 -- Predictive mode: on SCENARIO_CRITERIA_UPDATE, looks ahead
 -- through remaining MDT pulls and warns when the next pull
 -- will cross a milestone threshold.
+--
+-- MDT storage (confirmed from MDT source):
+--   MDT.mapInfo[dungeonIdx].mapID    = WoW challengeMapID
+--   MDT.db.global.presets[dungeonIdx][presetIdx].text
+--   MDT.db.global.presets[dungeonIdx][presetIdx].value.pulls
+--   pulls[pullIdx][enemyIdx] = { cloneIdx, ... }
+--   MDT.dungeonEnemies[dungeonIdx][enemyIdx].count = forces per clone
 -- ============================================================
 
 function MK_Predict_Init(MK)
@@ -19,56 +26,57 @@ local function GetMDT()
     return _G["MDT"]
 end
 
--- MDT uses its own dungeon index separate from challengeMapID.
--- We match via MDT.mapInfo[idx].mapID or .challengeMapID.
+-- MDT.mapInfo[dungeonIdx].mapID == WoW's challengeMapID.
 local function GetMDTDungeonIdx(challengeMapID)
     local MDT = GetMDT()
     if not MDT or not challengeMapID then return nil end
-    local mapInfo = MDT.mapInfo or MDT.dungeonMapInfo
+    local mapInfo = MDT.mapInfo
     if not mapInfo then return nil end
     for idx, info in pairs(mapInfo) do
-        if info.mapID == challengeMapID or info.challengeMapID == challengeMapID then
+        if type(info) == "table" and info.mapID == challengeMapID then
             return idx
         end
     end
     return nil
 end
 
-local function GetActiveRoute(MDT, dungeonIdx)
-    if not MDT.db or not MDT.db.profile then return nil end
-    local routes = MDT.db.profile.routes and MDT.db.profile.routes[dungeonIdx]
-    if not routes or #routes == 0 then return nil end
-    local sel = MDT.db.profile.selectedRoute
-    local idx = (sel and sel[dungeonIdx]) or 1
-    return routes[idx]
+-- Returns the presets array for a dungeon, or nil if none.
+local function GetDungeonPresets(MDT, dungeonIdx)
+    if not MDT.db or not MDT.db.global then return nil end
+    local presets = MDT.db.global.presets and MDT.db.global.presets[dungeonIdx]
+    return (presets and #presets > 0) and presets or nil
 end
 
--- Sum forces count from pull 1 up to upToPull, return as %.
--- MDT route.value[pullIdx][subZone][npcIdx] = { cloneIdx, ... }
--- MDT.dungeonEnemies[dungeonIdx][npcIdx].count = number per clone
-local function CalcPullForces(MDT, dungeonIdx, route, upToPull)
-    if not route or not route.value then return nil end
+-- Returns the currently selected preset for a dungeon, or nil.
+local function GetActivePreset(MDT, dungeonIdx)
+    local presets = GetDungeonPresets(MDT, dungeonIdx)
+    if not presets then return nil end
+    local sel = MDT.db.global.currentPreset
+    local idx = (sel and sel[dungeonIdx]) or 1
+    return presets[idx]
+end
+
+-- Sum forces from pulls 1..upToPull and return as %.
+-- pulls[pullIdx][enemyIdx] = { cloneIdx, ... }  (color key is a string, skip it)
+local function CalcPullForces(MDT, dungeonIdx, preset, upToPull)
+    if not preset or not preset.value or not preset.value.pulls then return nil end
+    local pulls   = preset.value.pulls
     local enemies = MDT.dungeonEnemies and MDT.dungeonEnemies[dungeonIdx]
     if not enemies then return nil end
-    local total = MDT:GetDungeonTotalCount(dungeonIdx)
+    local total   = MDT:GetDungeonTotalCount(dungeonIdx)
     if not total or total == 0 then return nil end
 
     local count = 0
     local ok = pcall(function()
         for pullIdx = 1, upToPull do
-            local pull = route.value[pullIdx]
+            local pull = pulls[pullIdx]
             if not pull then break end
-            for _, subZone in pairs(pull) do
-                if type(subZone) == "table" then
-                    for npcIdx, clones in pairs(subZone) do
-                        if type(clones) == "table" then
-                            local enemy = enemies[npcIdx]
-                            if enemy then
-                                for _ in ipairs(clones) do
-                                    count = count + (enemy.count or 0)
-                                end
-                            end
-                        end
+            for enemyIdx, clones in pairs(pull) do
+                -- Skip the "color" string key and any other non-numeric metadata.
+                if type(enemyIdx) == "number" and type(clones) == "table" then
+                    local enemy = enemies[enemyIdx]
+                    if enemy then
+                        count = count + (enemy.count or 0) * #clones
                     end
                 end
             end
@@ -94,18 +102,16 @@ function MK_Predict_OnCriteriaUpdate(MK)
     local dungeonIdx = GetMDTDungeonIdx(mapID)
     if not dungeonIdx then return end
 
-    local route = GetActiveRoute(MDT, dungeonIdx)
-    if not route or not route.value then return end
+    local preset = GetActivePreset(MDT, dungeonIdx)
+    if not preset or not preset.value or not preset.value.pulls then return end
 
     local currentPct = MK:GetCurrentForcesPercent()
     local milestones = MK:GetActiveDungeonProfile()
-    local numPulls   = #route.value
+    local numPulls   = #preset.value.pulls
 
-    -- Find the first pull beyond the current forces level
     for pullIdx = 1, numPulls do
-        local pctAfter = CalcPullForces(MDT, dungeonIdx, route, pullIdx)
+        local pctAfter = CalcPullForces(MDT, dungeonIdx, preset, pullIdx)
         if pctAfter and pctAfter > currentPct then
-            -- This is the next un-cleared pull; warn once per pull index
             if lastWarnedPull ~= pullIdx then
                 for _, ms in ipairs(milestones) do
                     if ms.enabled and currentPct < ms.threshold and pctAfter >= ms.threshold then
@@ -142,47 +148,56 @@ function MK_Predict_BuildUI(MK, frame, getSelectedMapID)
         muted:SetText("|cff888888Install MDT to enable route import.|r")
         muted:SetFullWidth(true)
         frame:AddChild(muted)
-        return function() end  -- no-op refresh
+        return function() end
     end
 
-    -- ── Route dropdown ──────────────────────────────────
-    local selectedRouteIdx = 1
+    -- ── Preset dropdown ─────────────────────────────────
+    local selectedPresetIdx = 1
 
-    local routeDrop = AG:Create("Dropdown")
-    routeDrop:SetLabel("Saved Route")
-    routeDrop:SetWidth(240)
-    frame:AddChild(routeDrop)
+    local presetDrop = AG:Create("Dropdown")
+    presetDrop:SetLabel("Saved Route")
+    presetDrop:SetWidth(240)
+    frame:AddChild(presetDrop)
 
-    routeDrop:SetCallback("OnValueChanged", function(_, _, val)
-        selectedRouteIdx = tonumber(val) or 1
+    presetDrop:SetCallback("OnValueChanged", function(_, _, val)
+        selectedPresetIdx = tonumber(val) or 1
     end)
 
     local function RefreshRouteList()
-        local mapID     = getSelectedMapID()
-        local dungeonIdx = mapID and GetMDTDungeonIdx(mapID)
+        local mapID = getSelectedMapID()
         local list, order = {}, {}
 
-        if dungeonIdx and MDT.db and MDT.db.profile and MDT.db.profile.routes then
-            local routes = MDT.db.profile.routes[dungeonIdx]
-            if routes then
-                for i, r in ipairs(routes) do
+        if not mapID then
+            list["0"] = "|cff888888Select a dungeon profile above to load MDT routes|r"
+            order     = { "0" }
+            selectedPresetIdx = 0
+            presetDrop:SetList(list, order)
+            presetDrop:SetValue("0")
+            return
+        end
+
+        local dungeonIdx = GetMDTDungeonIdx(mapID)
+        if dungeonIdx then
+            local presets = GetDungeonPresets(MDT, dungeonIdx)
+            if presets then
+                for i, p in ipairs(presets) do
                     local key = tostring(i)
-                    list[key] = r.text or ("Route " .. i)
+                    list[key] = p.text or ("Route " .. i)
                     table.insert(order, key)
                 end
             end
         end
 
         if not next(list) then
-            list["0"]  = "|cff888888No saved routes for this dungeon|r"
+            list["0"]  = "|cff888888No saved MDT routes for this dungeon|r"
             order      = { "0" }
-            selectedRouteIdx = 0
+            selectedPresetIdx = 0
         else
-            selectedRouteIdx = 1
+            selectedPresetIdx = 1
         end
 
-        routeDrop:SetList(list, order)
-        routeDrop:SetValue(order[1])
+        presetDrop:SetList(list, order)
+        presetDrop:SetValue(order[1])
     end
 
     RefreshRouteList()
@@ -215,13 +230,13 @@ function MK_Predict_BuildUI(MK, frame, getSelectedMapID)
             print("|cffF5B80E[MilestoneKeys]|r This dungeon has no MDT data.")
             return
         end
-        local routes  = MDT.db and MDT.db.profile and MDT.db.profile.routes
-        local route   = routes and routes[dungeonIdx] and routes[dungeonIdx][selectedRouteIdx]
-        if not route then
+        local presets = GetDungeonPresets(MDT, dungeonIdx)
+        local preset  = presets and presets[selectedPresetIdx]
+        if not preset then
             print("|cffF5B80E[MilestoneKeys]|r No route selected or route data missing.")
             return
         end
-        local pct = CalcPullForces(MDT, dungeonIdx, route, selectedPull)
+        local pct = CalcPullForces(MDT, dungeonIdx, preset, selectedPull)
         if not pct then
             print("|cffF5B80E[MilestoneKeys]|r Could not calculate forces — check MDT route data.")
             return
