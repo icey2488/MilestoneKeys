@@ -1,0 +1,6 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# WoW saved variables (local only)
+*.bak

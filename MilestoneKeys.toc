@@ -1,0 +1,25 @@
+## Interface: 120000
+## Title: MilestoneKeys
+## Notes: Set force % milestones for Mythic+ dungeons and get alerts as you progress
+## Author: You
+## Version: 1.0.0
+
+## SavedVariables: MilestoneKeysDB
+
+# Libraries
+Libs\LibStub\LibStub.lua
+Libs\CallbackHandler-1.0\CallbackHandler-1.0.lua
+Libs\AceAddon-3.0\AceAddon-3.0.lua
+Libs\AceEvent-3.0\AceEvent-3.0.lua
+Libs\AceDB-3.0\AceDB-3.0.lua
+Libs\AceGUI-3.0\AceGUI-3.0.lua
+Libs\LibDataBroker-1.1\LibDataBroker-1.1.lua
+Libs\LibDBIcon-1.0\LibDBIcon-1.0.lua
+
+# Core
+Core.lua
+Minimap.lua
+Sync.lua
+Predict.lua
+Alerts.lua
+UI.lua

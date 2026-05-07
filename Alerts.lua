@@ -1,0 +1,143 @@
+-- ============================================================
+-- MilestoneKeys - Alerts.lua
+-- Handles the three alert delivery modes:
+--   sound_chat  →  plays a sound + prints to chat
+--   sound       →  plays a sound only
+--   frame       →  large on-screen flash frame
+-- ============================================================
+
+-- -------------------------------------------------------
+-- Sound definitions
+-- -------------------------------------------------------
+local SOUNDS = {
+    alarm   = (SOUNDKIT and SOUNDKIT.UI_RAID_WARNING)    or 567478,
+    gong    = (SOUNDKIT and SOUNDKIT.UI_CHALLENGE_MODE_COMPLETE) or 568633,
+    levelup = (SOUNDKIT and SOUNDKIT.UI_PLAYER_LEVEL_UP) or 888079,
+}
+
+local SOUND_FALLBACK = SOUNDKIT and SOUNDKIT.UI_RAID_WARNING or 567478
+
+-- -------------------------------------------------------
+-- Alert frame  (created once, reused)
+-- -------------------------------------------------------
+local AlertFrame
+
+local function GetAlertFrame()
+    if AlertFrame then return AlertFrame end
+
+    AlertFrame = CreateFrame("Frame", "MilestoneKeysAlertFrame", UIParent)
+    AlertFrame:SetSize(420, 70)
+    AlertFrame:SetPoint("TOP", UIParent, "TOP", 0, -180)
+    AlertFrame:SetFrameStrata("HIGH")
+    AlertFrame:Hide()
+
+    -- Backdrop
+    local bg = AlertFrame:CreateTexture(nil, "BACKGROUND")
+    bg:SetAllPoints()
+    bg:SetColorTexture(0, 0, 0, 0.72)
+
+    -- Accent bar (left edge)
+    local accent = AlertFrame:CreateTexture(nil, "BORDER")
+    accent:SetSize(4, 70)
+    accent:SetPoint("LEFT", AlertFrame, "LEFT", 0, 0)
+    accent:SetColorTexture(0.96, 0.69, 0.13, 1)  -- M+ gold
+
+    -- Icon (forces skull)
+    local icon = AlertFrame:CreateTexture(nil, "ARTWORK")
+    icon:SetSize(40, 40)
+    icon:SetPoint("LEFT", AlertFrame, "LEFT", 16, 0)
+    icon:SetTexture("Interface\\Icons\\Achievement_Dungeon_GloryoftheHero")
+    AlertFrame.icon = icon
+
+    -- Milestone label
+    local title = AlertFrame:CreateFontString(nil, "OVERLAY", "GameFontNormalLarge")
+    title:SetPoint("TOPLEFT", AlertFrame, "TOPLEFT", 64, -10)
+    title:SetPoint("RIGHT", AlertFrame, "RIGHT", -12, 0)
+    title:SetTextColor(0.96, 0.69, 0.13, 1)
+    title:SetJustifyH("LEFT")
+    AlertFrame.title = title
+
+    -- Sub-label (forces %)
+    local sub = AlertFrame:CreateFontString(nil, "OVERLAY", "GameFontHighlight")
+    sub:SetPoint("BOTTOMLEFT", AlertFrame, "BOTTOMLEFT", 64, 10)
+    sub:SetPoint("RIGHT", AlertFrame, "RIGHT", -12, 0)
+    sub:SetTextColor(0.9, 0.9, 0.9, 1)
+    sub:SetJustifyH("LEFT")
+    AlertFrame.sub = sub
+
+    -- Border
+    local border = CreateFrame("Frame", nil, AlertFrame, "BackdropTemplate")
+    border:SetAllPoints()
+    border:SetBackdrop({
+        edgeFile = "Interface\\Tooltips\\UI-Tooltip-Border",
+        edgeSize = 12,
+    })
+    border:SetBackdropBorderColor(0.96, 0.69, 0.13, 0.6)
+
+    -- Animation group: fade in → hold → fade out
+    local ag = AlertFrame:CreateAnimationGroup()
+
+    local fadeIn = ag:CreateAnimation("Alpha")
+    fadeIn:SetOrder(1)
+    fadeIn:SetDuration(0.2)
+    fadeIn:SetFromAlpha(0)
+    fadeIn:SetToAlpha(1)
+
+    local hold = ag:CreateAnimation("Alpha")
+    hold:SetOrder(2)
+    hold:SetDuration(2.8)
+    hold:SetFromAlpha(1)
+    hold:SetToAlpha(1)
+
+    local fadeOut = ag:CreateAnimation("Alpha")
+    fadeOut:SetOrder(3)
+    fadeOut:SetDuration(0.5)
+    fadeOut:SetFromAlpha(1)
+    fadeOut:SetToAlpha(0)
+
+    ag:SetScript("OnPlay", function()
+        AlertFrame:Show()
+        AlertFrame:SetAlpha(0)
+    end)
+    ag:SetScript("OnFinished", function()
+        AlertFrame:Hide()
+    end)
+
+    AlertFrame.anim = ag
+    return AlertFrame
+end
+
+-- -------------------------------------------------------
+-- Main entry point  (called from Core.lua)
+-- -------------------------------------------------------
+function MK_TriggerAlert(milestone, currentPct, keystoneLevel)
+    local MK    = _G["MilestoneKeys"]
+    local profile = MK.db.profile
+    local aType = milestone.alertType or "sound_chat"
+
+    -- ── Sound ────────────────────────────────────────────
+    if aType == "sound" or aType == "sound_chat" then
+        local soundId = SOUNDS[profile.alertSound] or SOUND_FALLBACK
+        PlaySound(soundId, "Master")
+    end
+
+    -- ── Chat ─────────────────────────────────────────────
+    if (aType == "sound_chat" or aType == "chat") and profile.chatOutput then
+        local msg = string.format(
+            "|cffF5B80E[MilestoneKeys]|r |cffFFFFFF%s|r — |cff00FF96%.1f%%|r forces (+%d)",
+            milestone.label,
+            currentPct,
+            keystoneLevel
+        )
+        print(msg)
+    end
+
+    -- ── Frame ─────────────────────────────────────────────
+    if (aType == "frame" or aType == "sound_chat") and profile.frameAlerts then
+        local f = GetAlertFrame()
+        f.title:SetText(milestone.label)
+        f.sub:SetText(string.format("%.1f%% Enemy Forces  •  +%d Key", currentPct, keystoneLevel))
+        f.anim:Stop()
+        f.anim:Play()
+    end
+end
