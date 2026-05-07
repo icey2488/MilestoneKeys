@@ -73,19 +73,6 @@ They are reset (un-triggered) automatically at the start of each key.
 
 ---
 
-## Midnight API Note
-
-The Midnight expansion introduces more granular dungeon telemetry under
-`C_DungeonScore`. Future versions of MilestoneKeys plan to use per-pack
-forces data to add **predictive** alerts:
-
-> *"Next pull will push you past 40%"*
-
-This is not available in the current live API but the architecture is
-intentionally designed to slot this in via a separate prediction module.
-
----
-
 ## Files
 
 ```
@@ -94,5 +81,8 @@ MilestoneKeys/
 ├── Core.lua            — Event handling, forces detection, milestone eval
 ├── Alerts.lua          — Sound / chat / frame alert delivery
 ├── UI.lua              — AceGUI config panel
-└── Libs/               — Ace3 (AceAddon, AceEvent, AceDB, AceGUI)
+├── Minimap.lua         — LibDBIcon minimap button
+├── Sync.lua            — Party broadcast (MKSYNV1 prefix)
+├── Predict.lua         — MDT route import & predictive pull alerts
+└── Libs/               — Ace3 (AceAddon, AceEvent, AceDB, AceGUI, LibDBIcon)
 ```
