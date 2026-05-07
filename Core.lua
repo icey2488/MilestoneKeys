@@ -30,7 +30,9 @@ local DB_DEFAULTS = {
             partySync          = false,
             predictiveAlerts   = false,
         },
-        minimapPos = {},  -- LibDBIcon writes position here
+        minimapPos      = {},  -- LibDBIcon writes position here
+        alertFramePos   = nil, -- { point, x, y } saved when locked; nil = centered
+        alertFrameAlpha = 1.0,
     },
 }
 

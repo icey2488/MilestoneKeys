@@ -6,6 +6,25 @@
 
 local AG = LibStub("AceGUI-3.0")
 
+-- Alert-type helpers: encode/decode independent sound/chat/frame flags as a
+-- plain substring string so all combinations are backward-compatible.
+local function ParseAlertFlags(aType)
+    aType = aType or "sound_chat"
+    return {
+        sound = aType:find("sound", 1, true) ~= nil,
+        chat  = aType:find("chat",  1, true) ~= nil,
+        frame = aType:find("frame", 1, true) ~= nil,
+    }
+end
+
+local function FlagsToAlertType(flags)
+    local parts = {}
+    if flags.sound then table.insert(parts, "sound") end
+    if flags.chat  then table.insert(parts, "chat")  end
+    if flags.frame then table.insert(parts, "frame") end
+    return #parts > 0 and table.concat(parts, "_") or "none"
+end
+
 -- -------------------------------------------------------
 -- Called from Core.lua:OnInitialize
 -- -------------------------------------------------------
@@ -184,31 +203,65 @@ local function BuildPanel(MK)
             local labelBox = AG:Create("EditBox")
             labelBox:SetLabel("")
             labelBox:SetText(ms.label)
-            labelBox:SetWidth(155)
+            labelBox:SetWidth(110)
             labelBox:SetCallback("OnEnterPressed", function(_, _, val)
                 MK:UpdateMilestone(i, "label", val, selectedMapID)
                 labelBox:ClearFocus()
             end)
             row:AddChild(labelBox)
 
-            -- ── Alert type dropdown ───────────────────
-            local alertDrop = AG:Create("Dropdown")
-            alertDrop:SetLabel("")
-            alertDrop:SetWidth(120)
-            alertDrop:SetList(
-                {
-                    sound_chat = "All Alerts",
-                    sound      = "Sound Only",
-                    chat       = "Chat Only",
-                    frame      = "Frame Only",
-                },
-                { "sound_chat", "sound", "chat", "frame" }
-            )
-            alertDrop:SetValue(ms.alertType or "sound_chat")
-            alertDrop:SetCallback("OnValueChanged", function(_, _, val)
-                MK:UpdateMilestone(i, "alertType", val, selectedMapID)
+            -- ── Per-output checkboxes + All / None ────
+            local flags = ParseAlertFlags(ms.alertType)
+
+            local sndChk = AG:Create("CheckBox")
+            sndChk:SetLabel("Sound")
+            sndChk:SetWidth(70)
+            sndChk:SetValue(flags.sound)
+            sndChk:SetCallback("OnValueChanged", function(_, _, val)
+                flags.sound = val
+                MK:UpdateMilestone(i, "alertType", FlagsToAlertType(flags), selectedMapID)
             end)
-            row:AddChild(alertDrop)
+            row:AddChild(sndChk)
+
+            local chatChk = AG:Create("CheckBox")
+            chatChk:SetLabel("Chat")
+            chatChk:SetWidth(55)
+            chatChk:SetValue(flags.chat)
+            chatChk:SetCallback("OnValueChanged", function(_, _, val)
+                flags.chat = val
+                MK:UpdateMilestone(i, "alertType", FlagsToAlertType(flags), selectedMapID)
+            end)
+            row:AddChild(chatChk)
+
+            local frmChk = AG:Create("CheckBox")
+            frmChk:SetLabel("Frame")
+            frmChk:SetWidth(65)
+            frmChk:SetValue(flags.frame)
+            frmChk:SetCallback("OnValueChanged", function(_, _, val)
+                flags.frame = val
+                MK:UpdateMilestone(i, "alertType", FlagsToAlertType(flags), selectedMapID)
+            end)
+            row:AddChild(frmChk)
+
+            local allBtn = AG:Create("Button")
+            allBtn:SetText("All")
+            allBtn:SetWidth(40)
+            allBtn:SetCallback("OnClick", function()
+                flags.sound = true; flags.chat = true; flags.frame = true
+                sndChk:SetValue(true); chatChk:SetValue(true); frmChk:SetValue(true)
+                MK:UpdateMilestone(i, "alertType", FlagsToAlertType(flags), selectedMapID)
+            end)
+            row:AddChild(allBtn)
+
+            local noneBtn = AG:Create("Button")
+            noneBtn:SetText("None")
+            noneBtn:SetWidth(48)
+            noneBtn:SetCallback("OnClick", function()
+                flags.sound = false; flags.chat = false; flags.frame = false
+                sndChk:SetValue(false); chatChk:SetValue(false); frmChk:SetValue(false)
+                MK:UpdateMilestone(i, "alertType", FlagsToAlertType(flags), selectedMapID)
+            end)
+            row:AddChild(noneBtn)
 
             scrollFrame:AddChild(row)
 
@@ -317,8 +370,8 @@ local function BuildPanel(MK)
         row:AddChild(chk)
 
         local playBtn = AG:Create("Button")
-        playBtn:SetText("\226\150\182")  -- UTF-8 bytes for ▶
-        playBtn:SetWidth(36)
+        playBtn:SetText("Play")
+        playBtn:SetWidth(50)
         playBtn:SetCallback("OnClick", function()
             PlaySound(MK_GetSoundID(snd.key), "Master")
         end)
