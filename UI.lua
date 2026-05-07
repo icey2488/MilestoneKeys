@@ -282,35 +282,48 @@ local function BuildPanel(MK)
     sep3:SetText("Settings")
     outerScroll:AddChild(sep3)
 
-    -- Sound picker + preview button in a fixed-width group so AceGUI flow
-    -- accounts for the button width and doesn't overlap the next widget.
-    local soundGroup = AG:Create("SimpleGroup")
-    soundGroup:SetLayout("Flow")
-    soundGroup:SetWidth(245)
-    outerScroll:AddChild(soundGroup)
+    -- Alert Sound — radio-style list with per-sound preview, like BigWigs.
+    local soundLabel = AG:Create("Label")
+    soundLabel:SetText("Alert Sound")
+    soundLabel:SetFullWidth(true)
+    outerScroll:AddChild(soundLabel)
 
-    local soundDrop = AG:Create("Dropdown")
-    soundDrop:SetLabel("Alert Sound")
-    soundDrop:SetWidth(195)
-    soundDrop:SetList(
-        { alarm = "Alarm Horn", gong = "Gong", levelup = "Level Up" },
-        { "alarm", "gong", "levelup" }
-    )
-    soundDrop:SetValue(MK.db.profile.alertSound)
-    soundDrop:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.alertSound = val
-    end)
-    soundGroup:AddChild(soundDrop)
+    local SOUND_LIST = {
+        { key = "alarm",   label = "Alarm Horn" },
+        { key = "gong",    label = "Gong" },
+        { key = "levelup", label = "Level Up" },
+    }
 
-    -- AceGUI button so it lives inside soundGroup.content and receives clicks.
-    -- A native frame child of soundGroup.frame sits below the content layer.
-    local previewBtn = AG:Create("Button")
-    previewBtn:SetText("|TInterface\\Buttons\\UI-SpellbookIcon-NextPage-Up:16:16|t")
-    previewBtn:SetWidth(42)
-    previewBtn:SetCallback("OnClick", function()
-        PlaySound(MK_GetSoundID(MK.db.profile.alertSound), "Master")
-    end)
-    soundGroup:AddChild(previewBtn)
+    local soundChkMap = {}
+
+    for _, snd in ipairs(SOUND_LIST) do
+        local row = AG:Create("SimpleGroup")
+        row:SetLayout("Flow")
+        row:SetFullWidth(true)
+        outerScroll:AddChild(row)
+
+        local chk = AG:Create("CheckBox")
+        chk:SetLabel(snd.label)
+        chk:SetValue(MK.db.profile.alertSound == snd.key)
+        chk:SetWidth(185)
+        chk:SetCallback("OnValueChanged", function(_, _, val)
+            if not val then chk:SetValue(true); return end
+            MK.db.profile.alertSound = snd.key
+            for k, c in pairs(soundChkMap) do
+                if k ~= snd.key then c:SetValue(false) end
+            end
+        end)
+        soundChkMap[snd.key] = chk
+        row:AddChild(chk)
+
+        local playBtn = AG:Create("Button")
+        playBtn:SetText("\226\150\182")  -- UTF-8 bytes for ▶
+        playBtn:SetWidth(36)
+        playBtn:SetCallback("OnClick", function()
+            PlaySound(MK_GetSoundID(snd.key), "Master")
+        end)
+        row:AddChild(playBtn)
+    end
 
     -- Chat output toggle
     local chatChk = AG:Create("CheckBox")
