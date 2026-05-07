@@ -41,9 +41,11 @@ local function GetMDTDungeonIdx(challengeMapID)
 end
 
 -- Returns the presets array for a dungeon, or nil if none.
+-- MDT exposes its global DB via MDT:GetDB() — it does not use MDT.db.
 local function GetDungeonPresets(MDT, dungeonIdx)
-    if not MDT.db or not MDT.db.global then return nil end
-    local presets = MDT.db.global.presets and MDT.db.global.presets[dungeonIdx]
+    if type(MDT.GetDB) ~= "function" then return nil end
+    local db = MDT:GetDB()
+    local presets = db.presets and db.presets[dungeonIdx]
     return (presets and #presets > 0) and presets or nil
 end
 
@@ -51,7 +53,8 @@ end
 local function GetActivePreset(MDT, dungeonIdx)
     local presets = GetDungeonPresets(MDT, dungeonIdx)
     if not presets then return nil end
-    local sel = MDT.db.global.currentPreset
+    local db  = MDT:GetDB()
+    local sel = db.currentPreset
     local idx = (sel and sel[dungeonIdx]) or 1
     return presets[idx]
 end
@@ -72,8 +75,8 @@ local function CalcPullForces(MDT, dungeonIdx, preset, upToPull)
             local pull = pulls[pullIdx]
             if not pull then break end
             for enemyIdx, clones in pairs(pull) do
-                -- Skip the "color" string key and any other non-numeric metadata.
-                if type(enemyIdx) == "number" and type(clones) == "table" then
+                -- Pull keys are strings ("1", "5", …); skip non-numeric metadata like "color".
+                if tonumber(enemyIdx) and type(clones) == "table" then
                     local enemy = enemies[enemyIdx]
                     if enemy then
                         count = count + (enemy.count or 0) * #clones

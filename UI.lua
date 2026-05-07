@@ -282,7 +282,13 @@ local function BuildPanel(MK)
     sep3:SetText("Settings")
     outerScroll:AddChild(sep3)
 
-    -- Sound picker
+    -- Sound picker + preview button in a fixed-width group so AceGUI flow
+    -- accounts for the button width and doesn't overlap the next widget.
+    local soundGroup = AG:Create("SimpleGroup")
+    soundGroup:SetLayout("Flow")
+    soundGroup:SetWidth(220)
+    outerScroll:AddChild(soundGroup)
+
     local soundDrop = AG:Create("Dropdown")
     soundDrop:SetLabel("Alert Sound")
     soundDrop:SetWidth(180)
@@ -294,11 +300,11 @@ local function BuildPanel(MK)
     soundDrop:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.alertSound = val
     end)
-    outerScroll:AddChild(soundDrop)
+    soundGroup:AddChild(soundDrop)
 
-    -- Sound preview button — native frame anchored beside the dropdown.
-    -- y offset -12 lines it up with the dropdown button row (below the label).
-    local previewBtn = CreateFrame("Button", nil, soundDrop.frame)
+    -- Native preview button parented to soundGroup so it stays within the
+    -- 220px group frame and doesn't bleed into adjacent AceGUI widgets.
+    local previewBtn = CreateFrame("Button", nil, soundGroup.frame)
     previewBtn:SetSize(24, 24)
     previewBtn:SetPoint("LEFT", soundDrop.frame, "RIGHT", 4, -12)
     previewBtn:SetNormalTexture("Interface\\Buttons\\UI-SpellbookIcon-NextPage-Up")
