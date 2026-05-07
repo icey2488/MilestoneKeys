@@ -60,7 +60,7 @@ function MK_UI_Init(MK)
         if arg == "test" then
             local kLevel = MK:GetKeystoneLevel()
             MK_TriggerAlert(
-                { label = "Test Alert", alertType = "sound_chat" },
+                { label = "Test Alert", alertType = "sound_chat_frame" },
                 42.7,
                 kLevel > 0 and kLevel or 10
             )
@@ -152,6 +152,23 @@ local function BuildPanel(MK)
     sep1:SetFullWidth(true)
     sep1:SetText("")
     outerScroll:AddChild(sep1)
+
+    -- Column headers aligned to the milestone row controls below
+    local hdrRow = AG:Create("SimpleGroup")
+    hdrRow:SetFullWidth(true)
+    hdrRow:SetLayout("Flow")
+    local function MkHdr(text, w)
+        local l = AG:Create("Label")
+        l:SetText("|cffF5B80E" .. text .. "|r")
+        l:SetFontObject(GameFontNormalSmall)
+        l:SetWidth(w)
+        return l
+    end
+    hdrRow:AddChild(MkHdr("On",       28))
+    hdrRow:AddChild(MkHdr("Forces %", 50))
+    hdrRow:AddChild(MkHdr("Label",   110))
+    hdrRow:AddChild(MkHdr("Alerts",  200))
+    outerScroll:AddChild(hdrRow)
 
     local scrollFrame = AG:Create("ScrollFrame")
     scrollFrame:SetFullWidth(true)
@@ -268,7 +285,7 @@ local function BuildPanel(MK)
 
             local allBtn = AG:Create("Button")
             allBtn:SetText("All")
-            allBtn:SetWidth(40)
+            allBtn:SetWidth(50)
             allBtn:SetCallback("OnClick", function()
                 flags.sound = true; flags.chat = true; flags.frame = true
                 sndChk:SetValue(true); chatChk:SetValue(true); frmChk:SetValue(true)
@@ -278,7 +295,7 @@ local function BuildPanel(MK)
 
             local noneBtn = AG:Create("Button")
             noneBtn:SetText("None")
-            noneBtn:SetWidth(48)
+            noneBtn:SetWidth(56)
             noneBtn:SetCallback("OnClick", function()
                 flags.sound = false; flags.chat = false; flags.frame = false
                 sndChk:SetValue(false); chatChk:SetValue(false); frmChk:SetValue(false)
@@ -394,9 +411,10 @@ local function BuildPanel(MK)
 
         local playBtn = AG:Create("Button")
         playBtn:SetText("Play")
-        playBtn:SetWidth(50)
+        playBtn:SetWidth(60)
         playBtn:SetCallback("OnClick", function()
-            PlaySound(MK_GetSoundID(snd.key), "Master")
+            local id = MK_GetSoundID(snd.key) or (SOUNDKIT and SOUNDKIT.UI_RAID_WARNING) or 567478
+            PlaySound(id, "Master")
         end)
         row:AddChild(playBtn)
     end
@@ -536,7 +554,7 @@ local function BuildPanel(MK)
     testBtn:SetCallback("OnClick", function()
         local kLevel = MK:GetKeystoneLevel()
         MK_TriggerAlert(
-            { label = "Test Milestone", alertType = "sound_chat" },
+            { label = "Test Milestone", alertType = "sound_chat_frame" },
             42.7,
             kLevel > 0 and kLevel or 10
         )

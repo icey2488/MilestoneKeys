@@ -2,6 +2,17 @@
 
 ## [Unreleased]
 
+## [1.0.4] - 2026-05-07
+### Added
+- Column headers ("On", "Forces %", "Label", "Alerts") above the milestone list, styled in gold with GameFontNormalSmall.
+
+### Fixed
+- Truncated "P..." Play buttons in Alert Sound section widened to 60 px so "Play" renders fully.
+- Truncated "..." All/None buttons on milestone rows widened (All → 50 px, None → 56 px).
+- Play button OnClick now has an explicit fallback sound ID in case MK_GetSoundID returns nil.
+- `/mk test` and "Test Alert" button now use `alertType = "sound_chat_frame"` so the on-screen alert frame fires during tests (was `sound_chat`, which suppressed the frame).
+- Nominal forces mode now renders correctly during `/mk test`: when quantity/total are unavailable, derives stand-in values from the current % (e.g. "42/100 forces") instead of silently falling back to percentage format.
+
 ## [1.0.3] - 2026-05-07
 ### Added
 - Milestone rows now have independent Sound / Chat / Frame checkboxes instead of a single dropdown, with All and None buttons for quick selection.
