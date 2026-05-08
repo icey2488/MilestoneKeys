@@ -30,10 +30,14 @@ local DB_DEFAULTS = {
             partySync          = false,
             predictiveAlerts   = false,
             forcesDisplayMode  = "pct_0",  -- pct_0, pct_1, pct_2, nominal
+            showHUD            = true,
         },
         minimapPos      = {},  -- LibDBIcon writes position here
         alertFramePos   = nil, -- { point, x, y } saved when locked; nil = centered
         alertFrameAlpha = 1.0,
+        hudFramePos     = nil, -- { point, x, y }
+        hudFrameAlpha   = 0.8,
+        hudLocked       = false,
     },
 }
 
@@ -60,6 +64,7 @@ function MK:OnInitialize()
     MK_Minimap_Init(self)
     MK_Sync_Init(self)
     MK_Predict_Init(self)
+    MK_HUD_Init(self)
 end
 
 function MK:OnEnable()
@@ -86,6 +91,7 @@ end
 
 function MK:CHALLENGE_MODE_COMPLETED()
     State.active = false
+    MK_HUD_OnRunEnd()
 end
 
 function MK:CHALLENGE_MODE_RESET()
@@ -93,6 +99,7 @@ function MK:CHALLENGE_MODE_RESET()
     State.activeChallengeMapID = nil
     wipe(State.triggered)
     State.lastPct = 0
+    MK_HUD_OnRunEnd()
 end
 
 function MK:SCENARIO_CRITERIA_UPDATE()
@@ -116,6 +123,7 @@ function MK:InitRun()
     if State.forcesIndex then
         self:EvaluateForces()
     end
+    MK_HUD_OnRunStart()
 end
 
 -- -------------------------------------------------------
@@ -124,15 +132,38 @@ end
 -- -------------------------------------------------------
 local FORCES_FLAGS_MASK = 0x80
 
+local function GetCriteriaInfo(index)
+    if C_ScenarioInfo and C_ScenarioInfo.GetCriteriaInfo then
+        return C_ScenarioInfo.GetCriteriaInfo(index)
+    elseif C_Scenario and C_Scenario.GetCriteriaInfo then
+        return C_Scenario.GetCriteriaInfo(index)
+    end
+    return nil
+end
+
+local function GetStepInfo()
+    if C_ScenarioInfo and C_ScenarioInfo.GetStepInfo then
+        return C_ScenarioInfo.GetStepInfo()
+    elseif C_Scenario and C_Scenario.GetStepInfo then
+        return C_Scenario.GetStepInfo()
+    end
+    return nil, nil, 0
+end
+
 function MK:DetectForcesIndex()
-    local _, _, numCriteria = C_Scenario.GetStepInfo()
+    local _, _, numCriteria = GetStepInfo()
     numCriteria = numCriteria or 0
     local bestIndex, bestTotal = nil, 0
 
     for i = 1, numCriteria do
-        local info = C_Scenario.GetCriteriaInfo(i)
+        local info = GetCriteriaInfo(i)
         if info then
+            -- Explicit forces flag (preferred)
             if bit.band(info.flags or 0, FORCES_FLAGS_MASK) > 0 then
+                return i
+            end
+            -- TWW: forces criteria uses weighted progress; totalQuantity is hidden (0)
+            if info.isWeightedProgress then
                 return i
             end
             if (info.totalQuantity or 0) > bestTotal then
@@ -156,13 +187,25 @@ function MK:EvaluateForces()
         if not idx then return end
     end
 
-    local info = C_Scenario.GetCriteriaInfo(idx)
-    if not info or info.totalQuantity == 0 then return end
+    local info = GetCriteriaInfo(idx)
+    if not info then return end
 
-    local pct = (info.quantity / info.totalQuantity) * 100
+    local pct, qty, tot
+    if info.isWeightedProgress then
+        -- TWW: quantity IS the percentage (0-100); raw counts are hidden
+        pct = info.quantity
+        qty = nil
+        tot = nil
+    else
+        if info.totalQuantity == 0 then return end
+        pct = (info.quantity / info.totalQuantity) * 100
+        qty = info.quantity
+        tot = info.totalQuantity
+    end
+
     State.lastPct      = pct
-    State.lastQuantity = info.quantity
-    State.lastTotal    = info.totalQuantity
+    State.lastQuantity = qty or 0
+    State.lastTotal    = tot or 0
 
     local milestones = self:GetActiveDungeonProfile()
 
@@ -172,8 +215,9 @@ function MK:EvaluateForces()
             and pct >= milestone.threshold
         then
             State.triggered[i] = true
-            MK_TriggerAlert(milestone, pct, State.keystoneLevel, info.quantity, info.totalQuantity)
+            MK_TriggerAlert(milestone, pct, State.keystoneLevel, qty, tot)
             MK_Sync_Broadcast(milestone)
+            MK_HUD_OnMilestoneTriggered(i)
         end
     end
 

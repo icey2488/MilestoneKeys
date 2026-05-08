@@ -2,6 +2,42 @@
 
 ## [Unreleased]
 
+## [1.0.10] - 2026-05-08
+### Fixed
+- `C_Scenario.GetCriteriaInfo` and `C_Scenario.GetStepInfo` are now called through safe local wrappers (`GetCriteriaInfo`, `GetStepInfo`) that try `C_ScenarioInfo` first (TWW), fall back to `C_Scenario`, and return nil/defaults rather than erroring if neither exists. Eliminates the "attempt to call a nil value" Lua error on line 141 that prevented forces tracking from functioning.
+
+## [1.0.9] - 2026-05-07
+### Fixed
+- "Level Up" alert sound now uses FileDataID 569593 (`Sound/Spells/LevelUp.ogg`, SoundKit 888) — the actual WoW level-up fanfare — instead of 543587 (BigWigs "Beware" chime). Play button and live alerts now both play the correct sound for each label.
+- Forces tracking now works in The War Within: when `isWeightedProgress = true`, `quantity` is already the forces percentage (Blizzard hides raw counts). `DetectForcesIndex` now recognises `isWeightedProgress` as the forces criteria, and `EvaluateForces` uses `quantity` directly instead of dividing by `totalQuantity` (which TWW sets to 0). Milestones were silently never triggering before this fix.
+- "Chat" and "Frame" checkboxes in the milestone list widened (65 px and 70 px respectively) to prevent label truncation.
+
+## [1.0.8] - 2026-05-07
+### Fixed
+- Sound playback completely reworked: replaced `PlaySound(soundKitID)` with `PlaySoundFile(fileDataID)` for both alert triggers and sound preview Play buttons. SoundKit IDs are unreliable in The War Within; raw FileDataIDs with `PlaySoundFile` work correctly.
+- SOUNDS table now uses verified WoW FileDataIDs (567397 alarm, 569200 gong, 543587 level-up) instead of BigWigs OGG paths or SOUNDKIT constants. No external addon dependency.
+- Removed all `[MK Debug]` print statements from the sound preview Play buttons.
+
+## [1.0.7] - 2026-05-07
+### Added
+- HUD frame: "Preview HUD" toggle button in Settings — shows/hides the HUD outside an active key so it can be repositioned freely.
+- HUD frame: "Lock HUD position" checkbox in Settings — saves lock state to `db.profile.hudLocked`; when locked the frame is click-through (EnableMouse false).
+- `hudLocked = false` added to DB_DEFAULTS.
+
+### Fixed
+- `PlaySound` channel changed from `"Master"` to `"SFX"` in both alert triggers (Alerts.lua) and sound preview Play buttons (UI.lua). `"Master"` was routing through an audio path that produced no audible output on some systems.
+
+## [1.0.6] - 2026-05-07
+### Added
+- Persistent in-run HUD frame (HUD.lua): lists all enabled milestones; triggered rows flash then dim with a strikethrough line. Draggable; position saved to `db.profile.hudFramePos`.
+- "Show milestone HUD during keys" checkbox in Settings.
+- "HUD Frame Opacity" slider in Settings (0.1–1.0, default 0.8), calls `MK_HUD_SetAlpha` live.
+- `hudFramePos`, `hudFrameAlpha`, and `options.showHUD` added to DB_DEFAULTS in Core.lua.
+- `MK_HUD_OnMilestoneTriggered(i)` wired into `EvaluateForces`; `MK_HUD_OnRunStart/End` wired into `InitRun`, `CHALLENGE_MODE_COMPLETED`, and `CHALLENGE_MODE_RESET`.
+
+### Debug
+- Added temporary debug prints to sound preview Play buttons (key, sound ID, before/after PlaySound) for in-game tracing.
+
 ## [1.0.5] - 2026-05-07
 ### Added
 - Forces display consolidated into a single dropdown: Percentage (85%), Percentage (84.9%), Percentage (84.94%), Nominal (382/450). Replaces the separate "decimal places" dropdown and "Nominal forces" checkbox.
