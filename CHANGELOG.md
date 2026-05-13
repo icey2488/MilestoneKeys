@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [dev-diag-1] - 2026-05-13
+### Debug
+- Added diagnostic `print` statements to `DetectForcesIndex` and `EvaluateForces` in Core.lua to capture the exact field names and values Blizzard returns for the forces scenario criteria. Each `SCENARIO_CRITERIA_UPDATE` event now dumps the full `info` table and computed `pct` to the chat frame so the correct percentage field can be identified. **Not for release — remove before merging to main.**
+
 ## [1.0.10] - 2026-05-08
 ### Fixed
 - `C_Scenario.GetCriteriaInfo` and `C_Scenario.GetStepInfo` are now called through safe local wrappers (`GetCriteriaInfo`, `GetStepInfo`) that try `C_ScenarioInfo` first (TWW), fall back to `C_Scenario`, and return nil/defaults rather than erroring if neither exists. Eliminates the "attempt to call a nil value" Lua error on line 141 that prevented forces tracking from functioning.

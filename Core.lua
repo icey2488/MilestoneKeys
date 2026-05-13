@@ -153,26 +153,33 @@ end
 function MK:DetectForcesIndex()
     local _, _, numCriteria = GetStepInfo()
     numCriteria = numCriteria or 0
-    local bestIndex, bestTotal = nil, 0
+    local bestIndex, bestTotal, bestFlags = nil, 0, nil
 
     for i = 1, numCriteria do
         local info = GetCriteriaInfo(i)
         if info then
             -- Explicit forces flag (preferred)
             if bit.band(info.flags or 0, FORCES_FLAGS_MASK) > 0 then
+                print("[MK Debug] forces criteria index =", i, "(flags match)")
+                print("[MK Debug] criteria flags =", tostring(info.flags))
                 return i
             end
             -- TWW: forces criteria uses weighted progress; totalQuantity is hidden (0)
             if info.isWeightedProgress then
+                print("[MK Debug] forces criteria index =", i, "(isWeightedProgress)")
+                print("[MK Debug] criteria flags =", tostring(info.flags))
                 return i
             end
             if (info.totalQuantity or 0) > bestTotal then
                 bestTotal = info.totalQuantity
                 bestIndex = i
+                bestFlags = info.flags
             end
         end
     end
 
+    print("[MK Debug] forces criteria index =", tostring(bestIndex), "(fallback: highest totalQuantity)")
+    print("[MK Debug] criteria flags =", tostring(bestFlags))
     return bestIndex
 end
 
@@ -190,6 +197,11 @@ function MK:EvaluateForces()
     local info = GetCriteriaInfo(idx)
     if not info then return end
 
+    print("[MK Debug] === criteria info dump ===")
+    for k, v in pairs(info) do
+        print("[MK Debug]", k, "=", tostring(v))
+    end
+
     local pct, qty, tot
     if info.isWeightedProgress then
         -- TWW: quantity IS the percentage (0-100); raw counts are hidden
@@ -202,6 +214,9 @@ function MK:EvaluateForces()
         qty = info.quantity
         tot = info.totalQuantity
     end
+
+    print("[MK Debug] computed pct =", pct)
+    print("[MK Debug] ==========================")
 
     State.lastPct      = pct
     State.lastQuantity = qty or 0
