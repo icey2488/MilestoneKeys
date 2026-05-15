@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [1.0.11] - 2026-05-15
+### Fixed
+- `DetectForcesIndex` rewritten for TWW/Midnight: detection now uses `isWeightedProgress == true` as the sole signal for the forces criteria slot. The old `flags & 0x80` bit-check no longer works — all criteria flags are 0 in the current API, causing boss-kill slots (`criteriaType=165`) to be selected instead. Confirmed via in-game diagnostic dump that the forces slot is uniquely identified by `isWeightedProgress=true` with real `quantity/totalQuantity` counts.
+- `EvaluateForces` now always computes `pct = (quantity / totalQuantity) * 100`. The previous branch that set `pct = info.quantity` directly when `isWeightedProgress` was true has been removed — the diagnostic showed `quantity` holds a raw enemy count (e.g. 66), not a percentage.
+- All diagnostic logging (`[MK Debug]` prints, `lastDump` throttle variable) removed. Code is back to clean production state.
+
 ## [dev-diag-2] - 2026-05-15
 ### Debug
 - Expanded diagnostic in `EvaluateForces` to enumerate **every** scenario criteria slot on each `SCENARIO_CRITERIA_UPDATE`, not just the slot `DetectForcesIndex` selected. Each line shows slot index, description, quantity/totalQuantity, flags, criteriaType, and isWeightedProgress. Output is throttled to once per 5 seconds to avoid chat spam. The selected slot index is printed last so incorrect detection is immediately visible. **Not for release — remove before merging to main.**

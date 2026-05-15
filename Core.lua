@@ -127,11 +127,9 @@ function MK:InitRun()
 end
 
 -- -------------------------------------------------------
--- Dynamically find the criteria index that represents
--- enemy forces.
+-- Scenario API wrappers: TWW uses C_ScenarioInfo,
+-- older clients use C_Scenario.
 -- -------------------------------------------------------
-local FORCES_FLAGS_MASK = 0x80
-
 local function GetCriteriaInfo(index)
     if C_ScenarioInfo and C_ScenarioInfo.GetCriteriaInfo then
         return C_ScenarioInfo.GetCriteriaInfo(index)
@@ -150,44 +148,27 @@ local function GetStepInfo()
     return nil, nil, 0
 end
 
+-- In TWW/Midnight the forces slot is the one criteria where
+-- isWeightedProgress=true; boss-kill slots use criteriaType=165
+-- with isWeightedProgress=false.  The old flags & 0x80 check no
+-- longer applies — all flags are 0 in the current API.
 function MK:DetectForcesIndex()
     local _, _, numCriteria = GetStepInfo()
-    numCriteria = numCriteria or 0
-    local bestIndex, bestTotal, bestFlags = nil, 0, nil
+    if not numCriteria or numCriteria == 0 then return nil end
 
     for i = 1, numCriteria do
         local info = GetCriteriaInfo(i)
-        if info then
-            -- Explicit forces flag (preferred)
-            if bit.band(info.flags or 0, FORCES_FLAGS_MASK) > 0 then
-                print("[MK Debug] forces criteria index =", i, "(flags match)")
-                print("[MK Debug] criteria flags =", tostring(info.flags))
-                return i
-            end
-            -- TWW: forces criteria uses weighted progress; totalQuantity is hidden (0)
-            if info.isWeightedProgress then
-                print("[MK Debug] forces criteria index =", i, "(isWeightedProgress)")
-                print("[MK Debug] criteria flags =", tostring(info.flags))
-                return i
-            end
-            if (info.totalQuantity or 0) > bestTotal then
-                bestTotal = info.totalQuantity
-                bestIndex = i
-                bestFlags = info.flags
-            end
+        if info and info.isWeightedProgress then
+            return i
         end
     end
 
-    print("[MK Debug] forces criteria index =", tostring(bestIndex), "(fallback: highest totalQuantity)")
-    print("[MK Debug] criteria flags =", tostring(bestFlags))
-    return bestIndex
+    return nil
 end
 
 -- -------------------------------------------------------
 -- Core evaluation loop
 -- -------------------------------------------------------
-local lastDump = 0  -- throttle: dump all criteria at most once per 5 s
-
 function MK:EvaluateForces()
     local idx = State.forcesIndex
     if not idx then
@@ -197,48 +178,15 @@ function MK:EvaluateForces()
     end
 
     local info = GetCriteriaInfo(idx)
-    if not info then return end
+    if not info or info.totalQuantity == 0 then return end
 
-    if GetTime() - lastDump >= 5 then
-        lastDump = GetTime()
-        local _, _, numCriteria = GetStepInfo()
-        numCriteria = numCriteria or 0
-        print("[MK Debug] ====== ALL CRITERIA (" .. tostring(numCriteria) .. " slots) ======")
-        for i = 1, numCriteria do
-            local si = GetCriteriaInfo(i)
-            if si then
-                print(string.format(
-                    "[MK Debug] slot=%d  desc=%s  qty=%s/%s  flags=%s  type=%s  isWeighted=%s",
-                    i,
-                    tostring(si.description),
-                    tostring(si.quantity),
-                    tostring(si.totalQuantity),
-                    tostring(si.flags),
-                    tostring(si.criteriaType),
-                    tostring(si.isWeightedProgress)
-                ))
-            end
-        end
-        print("[MK Debug] selected by DetectForcesIndex = " .. tostring(idx))
-        print("[MK Debug] =====================================")
-    end
-
-    local pct, qty, tot
-    if info.isWeightedProgress then
-        -- TWW: quantity IS the percentage (0-100); raw counts are hidden
-        pct = info.quantity
-        qty = nil
-        tot = nil
-    else
-        if info.totalQuantity == 0 then return end
-        pct = (info.quantity / info.totalQuantity) * 100
-        qty = info.quantity
-        tot = info.totalQuantity
-    end
+    local pct = (info.quantity / info.totalQuantity) * 100
+    local qty = info.quantity
+    local tot = info.totalQuantity
 
     State.lastPct      = pct
-    State.lastQuantity = qty or 0
-    State.lastTotal    = tot or 0
+    State.lastQuantity = qty
+    State.lastTotal    = tot
 
     local milestones = self:GetActiveDungeonProfile()
 
