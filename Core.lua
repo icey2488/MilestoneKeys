@@ -119,6 +119,7 @@ function MK:InitRun()
 
     wipe(State.triggered)
     State.lastPct = 0
+    self.sessionManualDungeonOverride = false
 
     if State.forcesIndex then
         self:EvaluateForces()
@@ -280,6 +281,34 @@ end
 
 function MK:GetChallengeMapID()
     return State.activeChallengeMapID
+end
+
+function MK:GetCurrentDungeonContext()
+    -- Priority 1: Active M+ key in progress
+    local activeMapID = C_ChallengeMode.GetActiveChallengeMapID()
+    if activeMapID then
+        return activeMapID, "active_key"
+    end
+
+    -- Priority 2: Inside an instance that is a valid M+ dungeon
+    local inInstance, instanceType = IsInInstance()
+    if inInstance and instanceType == "party" then
+        local _, _, _, _, _, _, _, instanceMapID = GetInstanceInfo()
+        local ok, challengeMaps = pcall(function() return C_ChallengeMode.GetMapTable() end)
+        if ok and challengeMaps then
+            for _, challengeMapID in ipairs(challengeMaps) do
+                local ok2, mapID = pcall(function()
+                    local _, _, _, _, _, _, _, id = C_ChallengeMode.GetMapUIInfo(challengeMapID)
+                    return id
+                end)
+                if ok2 and mapID == instanceMapID then
+                    return challengeMapID, "in_instance"
+                end
+            end
+        end
+    end
+
+    return nil, nil
 end
 
 function MK:IsMilestoneTriggeredByThreshold(threshold)

@@ -2,6 +2,12 @@
 
 ## [Unreleased]
 
+## [dev-feat-location] - 2026-05-15
+### Added
+- `MK:GetCurrentDungeonContext()` in Core.lua: returns the challenge map ID for the player's current context, checking active M+ key first, then party-instance map ID (translated via `C_ChallengeMode.GetMapUIInfo`). Returns a reason code (`"active_key"` or `"in_instance"`) alongside the ID. API calls are wrapped in `pcall` for forward-compatibility.
+- Dungeon dropdown in the options panel now auto-selects the current dungeon when the panel is opened, if `sessionManualDungeonOverride` is false. Shows a coloured indicator label to the right of the dropdown (`📍 Current key` in green or `📍 Current dungeon` in gold).
+- `MK.sessionManualDungeonOverride` flag: set to `true` when the player manually changes the dropdown (clears the indicator); reset to `false` in `InitRun` so the next key re-enables auto-detection.
+
 ## [dev-diag-3] - 2026-05-15
 ### Debug
 - Added throttled (once per 3 s) diagnostic in `EvaluateForces` that logs: which milestone table is being iterated and from which DB path (global vs dungeon-specific), then for every milestone slot: index, label, threshold value and type, `State.triggered[i]` status, current pct, pct type, and whether the threshold comparison passes. Intended to diagnose why an 89% milestone failed to trigger at 93% forces. **Not for release — remove before merging to main.**

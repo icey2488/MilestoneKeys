@@ -108,9 +108,39 @@ local function BuildPanel(MK)
     profileSep:SetText("Profile")
     outerScroll:AddChild(profileSep)
 
+    -- Auto-select the dungeon the player is currently in (unless overridden this session).
+    local autoMapID, autoReason = nil, nil
+    if not MK.sessionManualDungeonOverride then
+        autoMapID, autoReason = MK:GetCurrentDungeonContext()
+    end
+
+    local initialDropVal = "global"
+    if autoMapID then
+        initialDropVal = tostring(autoMapID)
+        selectedMapID  = autoMapID
+    end
+
+    local function GetContextText(reason)
+        if reason == "active_key" then
+            return "|cFF40FF40\xF0\x9F\x93\x8D Current key|r"
+        elseif reason == "in_instance" then
+            return "|cFFFFCC40\xF0\x9F\x93\x8D Current dungeon|r"
+        end
+        return ""
+    end
+
+    local profileRow = AG:Create("SimpleGroup")
+    profileRow:SetFullWidth(true)
+    profileRow:SetLayout("Flow")
+    outerScroll:AddChild(profileRow)
+
     local dungeonDrop = AG:Create("Dropdown")
     dungeonDrop:SetLabel("Editing profile for")
     dungeonDrop:SetWidth(280)
+
+    local contextLabel = AG:Create("Label")
+    contextLabel:SetWidth(160)
+    contextLabel:SetText(GetContextText(autoReason))
 
     local function BuildDungeonList()
         local list  = { global = "|cffFFFFFFGlobal (all dungeons)|r" }
@@ -131,13 +161,16 @@ local function BuildPanel(MK)
 
     local dList, dOrder = BuildDungeonList()
     dungeonDrop:SetList(dList, dOrder)
-    dungeonDrop:SetValue("global")
+    dungeonDrop:SetValue(initialDropVal)
     dungeonDrop:SetCallback("OnValueChanged", function(_, _, val)
+        MK.sessionManualDungeonOverride = true
+        contextLabel:SetText("")
         selectedMapID = (val == "global") and nil or tonumber(val)
         if RebuildList then RebuildList() end
         if refreshMDTRoutes then refreshMDTRoutes() end
     end)
-    outerScroll:AddChild(dungeonDrop)
+    profileRow:AddChild(dungeonDrop)
+    profileRow:AddChild(contextLabel)
 
     -- ====================================================
     -- SECTION: Milestones list
@@ -265,7 +298,7 @@ local function BuildPanel(MK)
 
             local chatChk = AG:Create("CheckBox")
             chatChk:SetLabel("Chat")
-            chatChk:SetWidth(50)
+            chatChk:SetWidth(65)
             chatChk:SetValue(flags.chat)
             chatChk:SetCallback("OnValueChanged", function(_, _, val)
                 flags.chat = val
@@ -275,7 +308,7 @@ local function BuildPanel(MK)
 
             local frmChk = AG:Create("CheckBox")
             frmChk:SetLabel("Frame")
-            frmChk:SetWidth(58)
+            frmChk:SetWidth(70)
             frmChk:SetValue(flags.frame)
             frmChk:SetCallback("OnValueChanged", function(_, _, val)
                 flags.frame = val
@@ -414,8 +447,7 @@ local function BuildPanel(MK)
         playBtn:SetText("Play")
         playBtn:SetWidth(60)
         playBtn:SetCallback("OnClick", function()
-            local id = MK_GetSoundID(k) or (SOUNDKIT and SOUNDKIT.UI_RAID_WARNING) or 567478
-            PlaySound(id, "Master")
+            MK_PlaySound(k)
         end)
         row:AddChild(playBtn)
     end
@@ -478,6 +510,45 @@ local function BuildPanel(MK)
     AddTooltip(alphaSlider, "Alert Frame Opacity",
         "Transparency of the on-screen alert banner.\n0.2 = nearly invisible  •  1.0 = fully opaque.")
 
+    -- HUD frame opacity slider
+    local hudAlphaSlider = AG:Create("Slider")
+    hudAlphaSlider:SetLabel("HUD Frame Opacity")
+    hudAlphaSlider:SetSliderValues(0.1, 1.0, 0.05)
+    hudAlphaSlider:SetValue(MK.db.profile.hudFrameAlpha or 0.8)
+    hudAlphaSlider:SetWidth(200)
+    hudAlphaSlider:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.hudFrameAlpha = val
+        MK_HUD_SetAlpha(val)
+    end)
+    outerScroll:AddChild(hudAlphaSlider)
+    AddTooltip(hudAlphaSlider, "HUD Frame Opacity",
+        "Transparency of the in-run milestone tracker.\n0.1 = nearly invisible  •  1.0 = fully opaque.")
+
+    -- HUD preview toggle
+    local hudPreviewBtn = AG:Create("Button")
+    hudPreviewBtn:SetText(MK_HUD_IsPreview() and "Hide HUD Preview" or "Preview HUD")
+    hudPreviewBtn:SetWidth(160)
+    hudPreviewBtn:SetCallback("OnClick", function()
+        MK_HUD_TogglePreview()
+        hudPreviewBtn:SetText(MK_HUD_IsPreview() and "Hide HUD Preview" or "Preview HUD")
+    end)
+    outerScroll:AddChild(hudPreviewBtn)
+    AddTooltip(hudPreviewBtn, "Preview HUD",
+        "Show or hide the milestone HUD outside of a key\nso you can reposition and inspect it.")
+
+    -- HUD lock checkbox
+    local hudLockChk = AG:Create("CheckBox")
+    hudLockChk:SetLabel("Lock HUD position")
+    hudLockChk:SetValue(MK.db.profile.hudLocked or false)
+    hudLockChk:SetWidth(180)
+    hudLockChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.hudLocked = val
+        MK_HUD_SetLocked(val)
+    end)
+    outerScroll:AddChild(hudLockChk)
+    AddTooltip(hudLockChk, "Lock HUD Position",
+        "Prevent the HUD from being accidentally dragged.\nWhen locked the frame is click-through.")
+
     -- Minimap button toggle
     local minimapChk = AG:Create("CheckBox")
     minimapChk:SetLabel("Show minimap button")
@@ -495,6 +566,18 @@ local function BuildPanel(MK)
     end)
     outerScroll:AddChild(minimapChk)
     AddTooltip(minimapChk, "Minimap Button", "Toggle the MilestoneKeys icon on the minimap.")
+
+    -- HUD toggle
+    local hudChk = AG:Create("CheckBox")
+    hudChk:SetLabel("Show milestone HUD during keys")
+    hudChk:SetValue(MK.db.profile.options.showHUD)
+    hudChk:SetFullWidth(true)
+    hudChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.showHUD = val
+    end)
+    outerScroll:AddChild(hudChk)
+    AddTooltip(hudChk, "Milestone HUD",
+        "Show a persistent tracker frame during Mythic+ runs\nlisting all milestones and their completion status.")
 
     -- Per-dungeon profiles toggle
     local perDungeonChk = AG:Create("CheckBox")
