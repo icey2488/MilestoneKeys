@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [dev-diag-3] - 2026-05-15
+### Debug
+- Added throttled (once per 3 s) diagnostic in `EvaluateForces` that logs: which milestone table is being iterated and from which DB path (global vs dungeon-specific), then for every milestone slot: index, label, threshold value and type, `State.triggered[i]` status, current pct, pct type, and whether the threshold comparison passes. Intended to diagnose why an 89% milestone failed to trigger at 93% forces. **Not for release — remove before merging to main.**
+
 ## [1.0.11] - 2026-05-15
 ### Fixed
 - `DetectForcesIndex` rewritten for TWW/Midnight: detection now uses `isWeightedProgress == true` as the sole signal for the forces criteria slot. The old `flags & 0x80` bit-check no longer works — all criteria flags are 0 in the current API, causing boss-kill slots (`criteriaType=165`) to be selected instead. Confirmed via in-game diagnostic dump that the forces slot is uniquely identified by `isWeightedProgress=true` with real `quantity/totalQuantity` counts.

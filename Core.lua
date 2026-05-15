@@ -169,6 +169,8 @@ end
 -- -------------------------------------------------------
 -- Core evaluation loop
 -- -------------------------------------------------------
+local lastEvalLog = 0
+
 function MK:EvaluateForces()
     local idx = State.forcesIndex
     if not idx then
@@ -189,6 +191,36 @@ function MK:EvaluateForces()
     State.lastTotal    = tot
 
     local milestones = self:GetActiveDungeonProfile()
+
+    if GetTime() - lastEvalLog >= 3 then
+        lastEvalLog = GetTime()
+        local opts   = self.db.profile.options
+        local source
+        if opts.perDungeonProfiles and State.activeChallengeMapID then
+            local dp = self.db.profile.dungeonProfiles[State.activeChallengeMapID]
+            if dp and dp.milestones and #dp.milestones > 0 then
+                source = "dungeonProfiles[" .. tostring(State.activeChallengeMapID) .. "].milestones"
+            else
+                source = "db.profile.milestones (fallback: dungeon profile empty)"
+            end
+        else
+            source = "db.profile.milestones"
+        end
+        print(string.format("[MK Eval] iterating %d milestones from %s", #milestones, source))
+        for i, milestone in ipairs(milestones) do
+            print(string.format(
+                "[MK Eval] [%d] label=%s  threshold=%s (type=%s)  triggered=%s  pct=%.2f (type=%s)  passes=%s",
+                i,
+                tostring(milestone.label),
+                tostring(milestone.threshold),
+                type(milestone.threshold),
+                tostring(State.triggered[i]),
+                pct,
+                type(pct),
+                tostring(pct >= milestone.threshold)
+            ))
+        end
+    end
 
     for i, milestone in ipairs(milestones) do
         if milestone.enabled
