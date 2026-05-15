@@ -2,6 +2,10 @@
 
 ## [Unreleased]
 
+## [dev-diag-2] - 2026-05-15
+### Debug
+- Expanded diagnostic in `EvaluateForces` to enumerate **every** scenario criteria slot on each `SCENARIO_CRITERIA_UPDATE`, not just the slot `DetectForcesIndex` selected. Each line shows slot index, description, quantity/totalQuantity, flags, criteriaType, and isWeightedProgress. Output is throttled to once per 5 seconds to avoid chat spam. The selected slot index is printed last so incorrect detection is immediately visible. **Not for release — remove before merging to main.**
+
 ## [dev-diag-1] - 2026-05-13
 ### Debug
 - Added diagnostic `print` statements to `DetectForcesIndex` and `EvaluateForces` in Core.lua to capture the exact field names and values Blizzard returns for the forces scenario criteria. Each `SCENARIO_CRITERIA_UPDATE` event now dumps the full `info` table and computed `pct` to the chat frame so the correct percentage field can be identified. **Not for release — remove before merging to main.**

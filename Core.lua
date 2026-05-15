@@ -186,6 +186,8 @@ end
 -- -------------------------------------------------------
 -- Core evaluation loop
 -- -------------------------------------------------------
+local lastDump = 0  -- throttle: dump all criteria at most once per 5 s
+
 function MK:EvaluateForces()
     local idx = State.forcesIndex
     if not idx then
@@ -197,9 +199,28 @@ function MK:EvaluateForces()
     local info = GetCriteriaInfo(idx)
     if not info then return end
 
-    print("[MK Debug] === criteria info dump ===")
-    for k, v in pairs(info) do
-        print("[MK Debug]", k, "=", tostring(v))
+    if GetTime() - lastDump >= 5 then
+        lastDump = GetTime()
+        local _, _, numCriteria = GetStepInfo()
+        numCriteria = numCriteria or 0
+        print("[MK Debug] ====== ALL CRITERIA (" .. tostring(numCriteria) .. " slots) ======")
+        for i = 1, numCriteria do
+            local si = GetCriteriaInfo(i)
+            if si then
+                print(string.format(
+                    "[MK Debug] slot=%d  desc=%s  qty=%s/%s  flags=%s  type=%s  isWeighted=%s",
+                    i,
+                    tostring(si.description),
+                    tostring(si.quantity),
+                    tostring(si.totalQuantity),
+                    tostring(si.flags),
+                    tostring(si.criteriaType),
+                    tostring(si.isWeightedProgress)
+                ))
+            end
+        end
+        print("[MK Debug] selected by DetectForcesIndex = " .. tostring(idx))
+        print("[MK Debug] =====================================")
     end
 
     local pct, qty, tot
@@ -214,9 +235,6 @@ function MK:EvaluateForces()
         qty = info.quantity
         tot = info.totalQuantity
     end
-
-    print("[MK Debug] computed pct =", pct)
-    print("[MK Debug] ==========================")
 
     State.lastPct      = pct
     State.lastQuantity = qty or 0
