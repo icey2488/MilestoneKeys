@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [dev-diag-4] - 2026-05-16
+### Debug
+- Added `[MK Detect]` prints inside `DetectForcesIndex`: logs the returned index on success, or nil with the reason (numCriteria=0 vs no isWeightedProgress slot found). Fires every time detection runs so call-site timing is visible.
+- Added `[MK Step]` block inside the existing 3s-throttled log in `EvaluateForces` (before `[MK Eval]`): dumps `currentStep`, `stepName`, and `numCriteria` from `C_Scenario.GetStepInfo()`, then enumerates every criteria slot in the current step (desc, qty/totalQty, isWeightedProgress, criteriaType), then prints which slot `FORCES_IDX` is cached at and what qty/totalQty it's reading. Intended to diagnose multi-step scenario bug (Pit of Saron) where forces criteria lives in a different step than the one detected at run start. **Not for release.**
+
 ## [dev-feat-location] - 2026-05-15
 ### Added
 - `MK:GetCurrentDungeonContext()` in Core.lua: returns the challenge map ID for the player's current context, checking active M+ key first, then party-instance map ID (translated via `C_ChallengeMode.GetMapUIInfo`). Returns a reason code (`"active_key"` or `"in_instance"`) alongside the ID. API calls are wrapped in `pcall` for forward-compatibility.

@@ -155,15 +155,20 @@ end
 -- longer applies — all flags are 0 in the current API.
 function MK:DetectForcesIndex()
     local _, _, numCriteria = GetStepInfo()
-    if not numCriteria or numCriteria == 0 then return nil end
+    if not numCriteria or numCriteria == 0 then
+        print("[MK Detect] DetectForcesIndex called, returned nil (numCriteria=" .. tostring(numCriteria) .. ")")
+        return nil
+    end
 
     for i = 1, numCriteria do
         local info = GetCriteriaInfo(i)
         if info and info.isWeightedProgress then
+            print("[MK Detect] DetectForcesIndex called, returned " .. tostring(i))
             return i
         end
     end
 
+    print("[MK Detect] DetectForcesIndex called, returned nil (no isWeightedProgress slot found)")
     return nil
 end
 
@@ -195,6 +200,37 @@ function MK:EvaluateForces()
 
     if GetTime() - lastEvalLog >= 3 then
         lastEvalLog = GetTime()
+
+        -- Step-level dump: reveals which scenario step is active and all its criteria slots.
+        local stepName, _, numCriteria, _, _, _, _, _, currentStep
+        if C_Scenario and C_Scenario.GetStepInfo then
+            stepName, _, numCriteria, _, _, _, _, _, currentStep = C_Scenario.GetStepInfo()
+        end
+        print(string.format(
+            "[MK Step] currentStep=%s  stepName=%s  numCriteria=%s",
+            tostring(currentStep), tostring(stepName), tostring(numCriteria)
+        ))
+        for i = 1, (numCriteria or 0) do
+            local slotInfo = GetCriteriaInfo(i)
+            if slotInfo then
+                print(string.format(
+                    "[MK Step]   slot=%d  desc=%s  qty=%s/%s  isWeighted=%s  type=%s",
+                    i,
+                    tostring(slotInfo.description),
+                    tostring(slotInfo.quantity),
+                    tostring(slotInfo.totalQuantity),
+                    tostring(slotInfo.isWeightedProgress),
+                    tostring(slotInfo.criteriaType)
+                ))
+            end
+        end
+        print(string.format(
+            "[MK Step]   FORCES_IDX cached as %s  →  reading qty=%s/%s",
+            tostring(idx),
+            tostring(info.quantity),
+            tostring(info.totalQuantity)
+        ))
+
         local opts   = self.db.profile.options
         local source
         if opts.perDungeonProfiles and State.activeChallengeMapID then
