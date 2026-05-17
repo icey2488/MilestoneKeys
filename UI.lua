@@ -143,9 +143,9 @@ local function BuildPanel(MK)
 
     local function GetContextText(reason)
         if reason == "active_key" then
-            return "|cFF40FF40\xF0\x9F\x93\x8D Current key|r"
+            return "|cFF40FF40* Current key|r"
         elseif reason == "in_instance" then
-            return "|cFFFFCC40\xF0\x9F\x93\x8D Current dungeon|r"
+            return "|cFFFFCC40* Current dungeon|r"
         end
         return ""
     end
