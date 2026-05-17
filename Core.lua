@@ -279,19 +279,22 @@ function MK:GetCurrentDungeonContext()
         return activeMapID, "active_key"
     end
 
-    -- Priority 2: Inside an instance that is a valid M+ dungeon
+    -- Priority 2: Inside an instance that is a valid M+ dungeon.
+    -- Match by name: GetMapUIInfo returns 5 values (name, id, timeLimit, texture, bg);
+    -- there is no instance-map-ID field, so name comparison is the correct approach.
     local inInstance, instanceType = IsInInstance()
     if inInstance and instanceType == "party" then
-        local _, _, _, _, _, _, _, instanceMapID = GetInstanceInfo()
-        local ok, challengeMaps = pcall(function() return C_ChallengeMode.GetMapTable() end)
-        if ok and challengeMaps then
-            for _, challengeMapID in ipairs(challengeMaps) do
-                local ok2, mapID = pcall(function()
-                    local _, _, _, _, _, _, _, id = C_ChallengeMode.GetMapUIInfo(challengeMapID)
-                    return id
-                end)
-                if ok2 and mapID == instanceMapID then
-                    return challengeMapID, "in_instance"
+        local instanceName = GetInstanceInfo()
+        if instanceName then
+            local ok, challengeMaps = pcall(function() return C_ChallengeMode.GetMapTable() end)
+            if ok and challengeMaps then
+                for _, challengeMapID in ipairs(challengeMaps) do
+                    local ok2, dungeonName = pcall(function()
+                        return C_ChallengeMode.GetMapUIInfo(challengeMapID)
+                    end)
+                    if ok2 and dungeonName == instanceName then
+                        return challengeMapID, "in_instance"
+                    end
                 end
             end
         end
