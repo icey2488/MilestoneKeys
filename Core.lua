@@ -232,6 +232,7 @@ function MK:EvaluateForces()
         end
     end
 
+    MK_Predict_OnCriteriaUpdate(self)
 end
 
 -- -------------------------------------------------------
