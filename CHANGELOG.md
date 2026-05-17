@@ -2,6 +2,27 @@
 
 ## [Unreleased]
 
+## [dev-fix-3] - 2026-05-17
+### Fixed
+- Forces percentage now computed correctly for The War Within (TWW) / Midnight.
+
+  **Resolved TWW scenario API layout** (do not change without re-testing in-game):
+  | Field | Meaning |
+  |---|---|
+  | `isWeightedProgress` | `true` → this is the forces criteria slot |
+  | `quantity` | Integer percent 0–100 (low precision; do not use as the primary value) |
+  | `totalQuantity` | Total enemies needed for 100% completion |
+  | `quantityString` | `"<rawKills>%"` — raw enemy kill count with a misleading `%` suffix; **not a percentage string**; parse leading digits only |
+
+  Decimal-precision percent must be computed by the addon: `(rawKills / totalQuantity) * 100`.
+
+  Previous bug: `dev-fix-2` matched the decimal regex `[%d%.]+` against `quantityString`, which parsed e.g. `"237%"` as `237.0`, then used that directly as `pct` — firing all milestones simultaneously. Fix: extract only the leading digit sequence `(%d+)` from `quantityString` and divide by `totalQuantity`.
+
+- `qty` passed to alert formatting (`MK_FormatForces`) is now `rawKills` (the actual enemy count), so nominal display mode correctly renders e.g. `237/585 forces`.
+- `pct` is clamped to `[0, 100]` after computation to guard against malformed API output.
+- Non-`isWeightedProgress` slots now cause an early `return` in `EvaluateForces` (forces slot is always `isWeightedProgress=true` in TWW; no division fallback needed).
+- **Diagnostics kept for one more verification run** — remove `[MK Step]`, `[MK Eval]`, `[MK Detect]` logging in follow-up commit after confirmation.
+
 ## [dev-fix-2] - 2026-05-16
 ### Fixed
 - `EvaluateForces` now reads `info.quantity` directly as the forces percentage when `info.isWeightedProgress == true`, instead of computing `(quantity / totalQuantity) * 100`. When `isWeightedProgress=true`, Blizzard stores the forces % as an integer in `quantity` (e.g. 21 for 21.52%); `totalQuantity` holds the total enemy forces count and is **not** a denominator. Dividing produced wildly wrong results (e.g. 4.57% when Blizzard showed 21.52%). This restores the intent of the v1.0.9 fix — the v1.0.11 reversion to the division formula was based on a misread of the diagnostic data. **Future maintainers: do NOT revert this to a division formula for the `isWeightedProgress` path.**

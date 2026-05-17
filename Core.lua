@@ -188,20 +188,28 @@ function MK:EvaluateForces()
     local info = GetCriteriaInfo(idx)
     if not info then return end
 
-    local pct
+    -- TWW scenario API layout for the isWeightedProgress (forces) slot:
+    --   quantity       = integer percent 0-100 (low precision)
+    --   totalQuantity  = total enemies needed for 100%
+    --   quantityString = "<rawKills>%" — raw kill count with a misleading "%" suffix;
+    --                    this is NOT a percentage string; parse the leading digits only
+    local pct, rawKills
     if info.isWeightedProgress then
-        -- quantity IS the forces % when isWeightedProgress=true; totalQuantity is
-        -- total-enemy metadata, NOT a denominator.  Prefer quantityString for decimal
-        -- precision (e.g. "21.52") when it differs from the integer quantity field.
-        local decimal = info.quantityString and tonumber(info.quantityString:match("([%d%.]+)"))
-        pct = (decimal and decimal ~= info.quantity) and decimal or info.quantity
+        if info.quantityString then
+            rawKills = tonumber(info.quantityString:match("(%d+)"))
+        end
+        if rawKills and info.totalQuantity and info.totalQuantity > 0 then
+            pct = (rawKills / info.totalQuantity) * 100
+        else
+            pct = info.quantity or 0
+        end
     else
-        if not info.totalQuantity or info.totalQuantity == 0 then return end
-        pct = (info.quantity / info.totalQuantity) * 100
+        return
     end
-    if not pct then return end
+    if pct > 100 then pct = 100 end
+    if pct < 0   then pct = 0   end
 
-    local qty = info.quantity
+    local qty = rawKills or math.floor(pct + 0.5)
     local tot = info.totalQuantity
 
     State.lastPct      = pct
