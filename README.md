@@ -3,23 +3,23 @@
 > Set enemy-forces % milestones for Mythic+ dungeons and get
 > sound / chat / on-screen alerts as you hit each threshold.
 
+Supports **WoW Midnight (12.x)**. All libraries are bundled — no separate Ace3 install needed.
+
 ---
 
 ## Installation
 
-1. Drop the `MilestoneKeys/` folder into:
-   ```
-   World of Warcraft/_retail_/Interface/AddOns/
-   ```
-2. The addon requires **Ace3** libraries. Install them via:
-   - [CurseForge standalone Ace3](https://www.curseforge.com/wow/addons/ace3)  
-   — OR — copy the Libs/ folder from another Ace3 addon you already use.
+Drop the `MilestoneKeys/` folder into:
 
-3. Log in and type `/mk` to open the config panel.
+```
+World of Warcraft/_retail_/Interface/AddOns/
+```
+
+Log in and type `/mk` to open the config panel.
 
 ---
 
-## Usage
+## Commands
 
 | Command | Action |
 |---|---|
@@ -29,20 +29,51 @@
 
 ---
 
+## Features
+
+### Milestone alerts
+Define up to any number of force-% thresholds (1–100). When enemy forces cross a threshold during a key, you get any combination of:
+- **Sound** — one of three built-in sounds (Alarm Horn, Gong, Level Up)
+- **Chat** — a message printed to your chat frame
+- **Frame** — a large on-screen banner that fades out automatically
+
+Each milestone has independent Sound / Chat / Frame toggles with All / None shortcuts.
+
+### In-run HUD
+A persistent, draggable frame lists all enabled milestones during a key. Triggered rows flash and dim with a strikethrough. Position and opacity are saved across sessions. Can be locked to prevent accidental dragging.
+
+### Forces display modes
+Choose how forces are shown in alerts and tooltips:
+- `85%` — rounded percentage
+- `84.9%` — one decimal
+- `84.94%` — two decimals
+- `382/450` — nominal (raw kill count / total)
+
+### Per-dungeon profiles
+Store a separate milestone set for each dungeon. When enabled, the profile matching the active dungeon is used automatically during the run. The config panel auto-selects the current dungeon when opened.
+
+### MDT Route Import
+If Mythic Dungeon Tools is installed, the config panel shows a **MDT Route Import** section. Pick a saved route and a pull number to calculate the forces % at that pull, then add it as a milestone with one click.
+
+### Party sync
+Optionally broadcasts a party chat message (via `MKSYNV1` prefix) when you cross a milestone, so the group sees your progress.
+
+---
+
 ## How It Works
 
 ```
 CHALLENGE_MODE_START
         │
         ▼
-   InitRun()  ──► detects forces criteria index dynamically
+   InitRun()  ──► detects forces criteria slot (isWeightedProgress = true)
         │
         ▼
 SCENARIO_CRITERIA_UPDATE (fires on every forces tick)
         │
         ▼
    EvaluateForces()
-        │   quantity / totalQuantity × 100  =  current %
+        │   rawKills (from quantityString) / totalQuantity × 100  =  current %
         ▼
    for each milestone: if pct >= threshold and not triggered
         │
@@ -50,26 +81,7 @@ SCENARIO_CRITERIA_UPDATE (fires on every forces tick)
    MK_TriggerAlert()  ──► Sound + Chat + Frame
 ```
 
-Forces progress is read from `C_Scenario.GetCriteriaInfo()`.
-The criteria index is detected dynamically each run by inspecting
-criteria flags (flag bit `0x80`) so it works across all dungeons
-without a lookup table.
-
----
-
-## Milestone Options
-
-Each milestone has:
-
-| Field | Description |
-|---|---|
-| **Threshold %** | 1–100, fires once when forces cross this value |
-| **Label** | Custom name shown in the alert |
-| **Alert Type** | `Sound + Chat`, `Sound Only`, `Chat Only`, `Frame Only` |
-| **Enabled** | Toggle without deleting |
-
-Milestones are stored in `SavedVariables` and persist across sessions.
-They are reset (un-triggered) automatically at the start of each key.
+Forces progress is read from `C_ScenarioInfo.GetCriteriaInfo()` (falls back to `C_Scenario` on older clients). The forces slot is identified by `isWeightedProgress = true`. Raw kill count is parsed from `quantityString` for sub-percent precision.
 
 ---
 
@@ -80,9 +92,10 @@ MilestoneKeys/
 ├── MilestoneKeys.toc   — Metadata & load order
 ├── Core.lua            — Event handling, forces detection, milestone eval
 ├── Alerts.lua          — Sound / chat / frame alert delivery
+├── HUD.lua             — In-run milestone tracker HUD
 ├── UI.lua              — AceGUI config panel
 ├── Minimap.lua         — LibDBIcon minimap button
 ├── Sync.lua            — Party broadcast (MKSYNV1 prefix)
 ├── Predict.lua         — MDT route import & predictive pull alerts
-└── Libs/               — Ace3 (AceAddon, AceEvent, AceDB, AceGUI, LibDBIcon)
+└── Libs/               — Bundled: Ace3, LibDataBroker, LibDBIcon
 ```
