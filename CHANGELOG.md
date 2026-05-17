@@ -2,6 +2,11 @@
 
 ## [Unreleased]
 
+## [dev-fix-1] - 2026-05-16
+### Fixed
+- `EvaluateForces` nil guard now also checks `not info.totalQuantity` before testing `== 0`, preventing a potential nil arithmetic error if the API returns an info table with no `totalQuantity` field.
+- `[MK Step]` diagnostic: per-slot loop now marks which slot is `FORCES_IDX` with a `← FORCES_IDX` suffix so the forces row is immediately visible in output. Final forces-slot print now issues a fresh `GetCriteriaInfo(idx)` call (rather than reusing the `info` local from the top of the function) and prints the computed `pct` alongside qty/totalQty, confirming the re-fetched values are consistent with what milestone evaluation uses. **Diagnostics not yet removed — keeping until next in-game test confirms pct matches Blizzard UI.**
+
 ## [dev-diag-4] - 2026-05-16
 ### Debug
 - Added `[MK Detect]` prints inside `DetectForcesIndex`: logs the returned index on success, or nil with the reason (numCriteria=0 vs no isWeightedProgress slot found). Fires every time detection runs so call-site timing is visible.

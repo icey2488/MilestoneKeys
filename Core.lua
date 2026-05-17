@@ -186,7 +186,7 @@ function MK:EvaluateForces()
     end
 
     local info = GetCriteriaInfo(idx)
-    if not info or info.totalQuantity == 0 then return end
+    if not info or not info.totalQuantity or info.totalQuantity == 0 then return end
 
     local pct = (info.quantity / info.totalQuantity) * 100
     local qty = info.quantity
@@ -213,22 +213,26 @@ function MK:EvaluateForces()
         for i = 1, (numCriteria or 0) do
             local slotInfo = GetCriteriaInfo(i)
             if slotInfo then
+                local marker = (i == idx) and "  ← FORCES_IDX" or ""
                 print(string.format(
-                    "[MK Step]   slot=%d  desc=%s  qty=%s/%s  isWeighted=%s  type=%s",
+                    "[MK Step]   slot=%d  desc=%s  qty=%s/%s  isWeighted=%s  type=%s%s",
                     i,
                     tostring(slotInfo.description),
                     tostring(slotInfo.quantity),
                     tostring(slotInfo.totalQuantity),
                     tostring(slotInfo.isWeightedProgress),
-                    tostring(slotInfo.criteriaType)
+                    tostring(slotInfo.criteriaType),
+                    marker
                 ))
             end
         end
+        local freshInfo = GetCriteriaInfo(idx)
         print(string.format(
-            "[MK Step]   FORCES_IDX cached as %s  →  reading qty=%s/%s",
+            "[MK Step]   FORCES_IDX=%s  fresh-read qty=%s/%s  computed pct=%.2f%%",
             tostring(idx),
-            tostring(info.quantity),
-            tostring(info.totalQuantity)
+            tostring(freshInfo and freshInfo.quantity),
+            tostring(freshInfo and freshInfo.totalQuantity),
+            pct
         ))
 
         local opts   = self.db.profile.options
