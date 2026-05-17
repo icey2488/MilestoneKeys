@@ -83,6 +83,14 @@ end
 function MK:PLAYER_ENTERING_WORLD()
     if C_ChallengeMode.IsChallengeModeActive() then
         self:InitRun()
+    elseif State.active then
+        -- Key was abandoned or group disbanded; CHALLENGE_MODE_RESET may not fire
+        -- cleanly in all cases (e.g. removed from group), so clean up here too.
+        State.active               = false
+        State.activeChallengeMapID = nil
+        wipe(State.triggered)
+        State.lastPct = 0
+        MK_HUD_OnRunEnd()
     end
 end
 
