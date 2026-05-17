@@ -155,28 +155,21 @@ end
 -- longer applies — all flags are 0 in the current API.
 function MK:DetectForcesIndex()
     local _, _, numCriteria = GetStepInfo()
-    if not numCriteria or numCriteria == 0 then
-        print("[MK Detect] DetectForcesIndex called, returned nil (numCriteria=" .. tostring(numCriteria) .. ")")
-        return nil
-    end
+    if not numCriteria or numCriteria == 0 then return nil end
 
     for i = 1, numCriteria do
         local info = GetCriteriaInfo(i)
         if info and info.isWeightedProgress then
-            print("[MK Detect] DetectForcesIndex called, returned " .. tostring(i))
             return i
         end
     end
 
-    print("[MK Detect] DetectForcesIndex called, returned nil (no isWeightedProgress slot found)")
     return nil
 end
 
 -- -------------------------------------------------------
 -- Core evaluation loop
 -- -------------------------------------------------------
-local lastEvalLog = 0
-
 function MK:EvaluateForces()
     local idx = State.forcesIndex
     if not idx then
@@ -217,72 +210,6 @@ function MK:EvaluateForces()
     State.lastTotal    = tot
 
     local milestones = self:GetActiveDungeonProfile()
-
-    if GetTime() - lastEvalLog >= 3 then
-        lastEvalLog = GetTime()
-
-        -- Step-level dump: reveals which scenario step is active and all its criteria slots.
-        local stepName, _, numCriteria, _, _, _, _, _, currentStep
-        if C_Scenario and C_Scenario.GetStepInfo then
-            stepName, _, numCriteria, _, _, _, _, _, currentStep = C_Scenario.GetStepInfo()
-        end
-        print(string.format(
-            "[MK Step] currentStep=%s  stepName=%s  numCriteria=%s",
-            tostring(currentStep), tostring(stepName), tostring(numCriteria)
-        ))
-        for i = 1, (numCriteria or 0) do
-            local slotInfo = GetCriteriaInfo(i)
-            if slotInfo then
-                local marker = (i == idx) and "  ← FORCES_IDX" or ""
-                print(string.format(
-                    "[MK Step]   slot=%d  desc=%s  qty=%s/%s  isWeighted=%s  type=%s%s",
-                    i,
-                    tostring(slotInfo.description),
-                    tostring(slotInfo.quantity),
-                    tostring(slotInfo.totalQuantity),
-                    tostring(slotInfo.isWeightedProgress),
-                    tostring(slotInfo.criteriaType),
-                    marker
-                ))
-            end
-        end
-        local freshInfo = GetCriteriaInfo(idx)
-        print(string.format(
-            "[MK Step]   FORCES_IDX=%s  quantity=%s  totalQuantity=%s  quantityString=%s  computed pct=%.4f%%",
-            tostring(idx),
-            tostring(freshInfo and freshInfo.quantity),
-            tostring(freshInfo and freshInfo.totalQuantity),
-            tostring(freshInfo and freshInfo.quantityString),
-            pct
-        ))
-
-        local opts   = self.db.profile.options
-        local source
-        if opts.perDungeonProfiles and State.activeChallengeMapID then
-            local dp = self.db.profile.dungeonProfiles[State.activeChallengeMapID]
-            if dp and dp.milestones and #dp.milestones > 0 then
-                source = "dungeonProfiles[" .. tostring(State.activeChallengeMapID) .. "].milestones"
-            else
-                source = "db.profile.milestones (fallback: dungeon profile empty)"
-            end
-        else
-            source = "db.profile.milestones"
-        end
-        print(string.format("[MK Eval] iterating %d milestones from %s", #milestones, source))
-        for i, milestone in ipairs(milestones) do
-            print(string.format(
-                "[MK Eval] [%d] label=%s  threshold=%s (type=%s)  triggered=%s  pct=%.2f (type=%s)  passes=%s",
-                i,
-                tostring(milestone.label),
-                tostring(milestone.threshold),
-                type(milestone.threshold),
-                tostring(State.triggered[i]),
-                pct,
-                type(pct),
-                tostring(pct >= milestone.threshold)
-            ))
-        end
-    end
 
     for i, milestone in ipairs(milestones) do
         if milestone.enabled

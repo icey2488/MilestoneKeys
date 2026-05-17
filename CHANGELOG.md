@@ -2,6 +2,16 @@
 
 ## [Unreleased]
 
+## [1.1.0] - 2026-05-17
+### Fixed
+- **Forces tracking now works correctly in The War Within (TWW) / Midnight.** All milestone alerts (sound, chat, HUD frame) fire at the right thresholds. Confirmed in-game: Algeth'ar Academy +14, milestones at 20/40/60/80/100% all triggered at correct thresholds; HUD percentage matched Blizzard UI.
+- Forces percentage is now computed with decimal precision using raw kill counts from `info.quantityString`, rather than the low-precision integer `info.quantity`.
+- Fixed a regression introduced in v1.0.11 where `(quantity / totalQuantity) * 100` produced wildly wrong results (e.g. 4.57% when Blizzard showed 21.52%) because `quantity` is an integer percent, not a raw kill count, when `isWeightedProgress = true`.
+- Nominal display mode (`237/585 forces`) now uses the correct raw kill count rather than the integer percent field.
+
+### Documentation
+- CHANGELOG now contains a permanent API reference table for the TWW forces scenario criteria slot, preventing future regressions. See `[dev-fix-3]` entry below.
+
 ## [dev-fix-3] - 2026-05-17
 ### Fixed
 - Forces percentage now computed correctly for The War Within (TWW) / Midnight.
