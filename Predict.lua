@@ -187,9 +187,11 @@ function MK_Predict_BuildUI(MK, frame, getSelectedMapID, onMilestoneAdded)
             local presets = GetDungeonPresets(MDT, dungeonIdx)
             if presets then
                 for i, p in ipairs(presets) do
-                    local key = tostring(i)
-                    list[key] = p.text or ("Route " .. i)
-                    table.insert(order, key)
+                    if p.text ~= "<New Route>" then
+                        local key = tostring(i)
+                        list[key] = p.text or ("Route " .. i)
+                        table.insert(order, key)
+                    end
                 end
             end
         end
