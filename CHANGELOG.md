@@ -2,6 +2,13 @@
 
 ## [Unreleased]
 
+## [dev-fix-2] - 2026-05-16
+### Fixed
+- `EvaluateForces` now reads `info.quantity` directly as the forces percentage when `info.isWeightedProgress == true`, instead of computing `(quantity / totalQuantity) * 100`. When `isWeightedProgress=true`, Blizzard stores the forces % as an integer in `quantity` (e.g. 21 for 21.52%); `totalQuantity` holds the total enemy forces count and is **not** a denominator. Dividing produced wildly wrong results (e.g. 4.57% when Blizzard showed 21.52%). This restores the intent of the v1.0.9 fix — the v1.0.11 reversion to the division formula was based on a misread of the diagnostic data. **Future maintainers: do NOT revert this to a division formula for the `isWeightedProgress` path.**
+- If `info.quantityString` contains a decimal string (e.g. `"21.52"`) that differs from the integer `quantity`, that parsed value is used as `pct` for sub-percent precision. If `quantityString` is nil or matches the integer, the integer `quantity` is used.
+- Guard is now `if not info then return end` only; `totalQuantity == 0` is no longer an early-exit for the `isWeightedProgress` path (where `totalQuantity` is informational, not a divisor).
+- `[MK Step]` forces-slot diagnostic line now prints `quantityString` and shows computed pct with 4 decimal places, so the next screenshot can confirm precision matches Blizzard UI. **Diagnostics kept for one more verification cycle — remove in follow-up commit.**
+
 ## [dev-fix-1] - 2026-05-16
 ### Fixed
 - `EvaluateForces` nil guard now also checks `not info.totalQuantity` before testing `== 0`, preventing a potential nil arithmetic error if the API returns an info table with no `totalQuantity` field.

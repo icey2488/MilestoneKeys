@@ -186,9 +186,21 @@ function MK:EvaluateForces()
     end
 
     local info = GetCriteriaInfo(idx)
-    if not info or not info.totalQuantity or info.totalQuantity == 0 then return end
+    if not info then return end
 
-    local pct = (info.quantity / info.totalQuantity) * 100
+    local pct
+    if info.isWeightedProgress then
+        -- quantity IS the forces % when isWeightedProgress=true; totalQuantity is
+        -- total-enemy metadata, NOT a denominator.  Prefer quantityString for decimal
+        -- precision (e.g. "21.52") when it differs from the integer quantity field.
+        local decimal = info.quantityString and tonumber(info.quantityString:match("([%d%.]+)"))
+        pct = (decimal and decimal ~= info.quantity) and decimal or info.quantity
+    else
+        if not info.totalQuantity or info.totalQuantity == 0 then return end
+        pct = (info.quantity / info.totalQuantity) * 100
+    end
+    if not pct then return end
+
     local qty = info.quantity
     local tot = info.totalQuantity
 
@@ -228,10 +240,11 @@ function MK:EvaluateForces()
         end
         local freshInfo = GetCriteriaInfo(idx)
         print(string.format(
-            "[MK Step]   FORCES_IDX=%s  fresh-read qty=%s/%s  computed pct=%.2f%%",
+            "[MK Step]   FORCES_IDX=%s  quantity=%s  totalQuantity=%s  quantityString=%s  computed pct=%.4f%%",
             tostring(idx),
             tostring(freshInfo and freshInfo.quantity),
             tostring(freshInfo and freshInfo.totalQuantity),
+            tostring(freshInfo and freshInfo.quantityString),
             pct
         ))
 
