@@ -624,18 +624,6 @@ local function BuildPanel(MK)
     AddTooltip(syncChk, "Party Sync",
         "Send a party chat message via MKSYNV1 prefix\nwhen you cross a milestone threshold.")
 
-    -- Predictive alerts toggle
-    local predictChk = AG:Create("CheckBox")
-    predictChk:SetLabel("MDT predictive pull alerts")
-    predictChk:SetValue(MK.db.profile.options.predictiveAlerts)
-    predictChk:SetWidth(220)
-    predictChk:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.options.predictiveAlerts = val
-    end)
-    outerScroll:AddChild(predictChk)
-    AddTooltip(predictChk, "MDT Predictive Alerts",
-        "Warn in chat when the next MDT pull will push you\npast a milestone threshold. Requires MDT.")
-
     -- Test button
     local sep4 = AG:Create("Heading")
     sep4:SetFullWidth(true)

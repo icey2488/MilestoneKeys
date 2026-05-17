@@ -10,6 +10,9 @@
 - Minimum resize guard: the panel cannot be shrunk below 700 × 450 (`SetResizeBounds` with `SetMinResize` fallback).
 - "Reset window" button at the bottom of the Settings section: wipes saved position/size and reopens the panel at defaults.
 
+### Notes
+- MDT predictive pull alerts are present in code but disabled in this release pending further testing. The MDT Route Import section (add milestones from pull data) is fully functional.
+
 ## [1.1.0] - 2026-05-17
 ### Fixed
 - **Forces tracking now works correctly in The War Within (TWW) / Midnight.** All milestone alerts (sound, chat, HUD frame) fire at the right thresholds. Confirmed in-game: Algeth'ar Academy +14, milestones at 20/40/60/80/100% all triggered at correct thresholds; HUD percentage matched Blizzard UI.
