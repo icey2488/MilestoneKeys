@@ -87,11 +87,32 @@ local function BuildPanel(MK)
 
     -- ── Outer frame ─────────────────────────────────────
     local frame = AG:Create("Frame")
-    frame:SetTitle("MilestoneKeys  |cffF5B80Ev1.0|r")
+    frame:SetTitle("MilestoneKeys  |cffF5B80Ev1.1|r")
     frame:SetStatusText("Set force % milestones for Mythic+ runs")
-    frame:SetWidth(540)
-    frame:SetHeight(520)
+    frame:SetWidth(820)
+    frame:SetHeight(620)
     frame:SetLayout("Fill")
+
+    -- Off-screen safety: clear saved position if the frame would land off-screen.
+    local uiState = MK.db.profile.uiState
+    if uiState.left and uiState.top then
+        local screenW = GetScreenWidth()
+        local screenH = GetScreenHeight()
+        local fw = uiState.width  or 820
+        local fh = uiState.height or 620
+        if uiState.left > screenW or uiState.top > screenH
+           or uiState.left + fw < 0 or uiState.top - fh > screenH then
+            uiState.left, uiState.top = nil, nil
+        end
+    end
+    frame:SetStatusTable(uiState)
+
+    -- Minimum size guard (SetResizeBounds is the modern API; fall back to SetMinResize).
+    if frame.frame.SetResizeBounds then
+        frame.frame:SetResizeBounds(700, 450)
+    elseif frame.frame.SetMinResize then
+        frame.frame:SetMinResize(700, 450)
+    end
 
     -- Single scrollable container holding all sections.
     local outerScroll = AG:Create("ScrollFrame")
@@ -633,6 +654,23 @@ local function BuildPanel(MK)
         )
     end)
     outerScroll:AddChild(testBtn)
+
+    local resetWinBtn = AG:Create("Button")
+    resetWinBtn:SetText("Reset window")
+    resetWinBtn:SetWidth(140)
+    resetWinBtn:SetCallback("OnClick", function()
+        wipe(MK.db.profile.uiState)
+        C_Timer.After(0, function()
+            if Panel then
+                AG:Release(Panel)
+                Panel = nil
+            end
+            Panel = BuildPanel(MK)
+        end)
+    end)
+    outerScroll:AddChild(resetWinBtn)
+    AddTooltip(resetWinBtn, "Reset Window",
+        "Reset the options panel to its default size and position.")
 
     -- ====================================================
     -- SECTION: MDT Route Import  (Predict.lua)

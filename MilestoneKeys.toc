@@ -2,7 +2,7 @@
 ## Title: MilestoneKeys
 ## Notes: Set force % milestones for Mythic+ dungeons and get alerts as you progress
 ## Author: You
-## Version: 1.1.0
+## Version: 1.1.1
 
 ## SavedVariables: MilestoneKeysDB
 

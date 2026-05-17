@@ -2,6 +2,14 @@
 
 ## [Unreleased]
 
+## [1.1.1] - 2026-05-17
+### Added
+- Options panel default width increased to 820 × 620 (was 540 × 520) so milestone row buttons (All / None) sit side by side without wrapping.
+- Options panel position and dimensions now persist across sessions via `AceGUI Frame:SetStatusTable()` backed by `db.profile.uiState`.
+- Off-screen safety: saved position is cleared if the frame would land entirely outside the current screen resolution (e.g. after switching from an ultrawide to a laptop).
+- Minimum resize guard: the panel cannot be shrunk below 700 × 450 (`SetResizeBounds` with `SetMinResize` fallback).
+- "Reset window" button at the bottom of the Settings section: wipes saved position/size and reopens the panel at defaults.
+
 ## [1.1.0] - 2026-05-17
 ### Fixed
 - **Forces tracking now works correctly in The War Within (TWW) / Midnight.** All milestone alerts (sound, chat, HUD frame) fire at the right thresholds. Confirmed in-game: Algeth'ar Academy +14, milestones at 20/40/60/80/100% all triggered at correct thresholds; HUD percentage matched Blizzard UI.

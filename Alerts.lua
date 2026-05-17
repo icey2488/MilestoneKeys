@@ -9,17 +9,24 @@
 -- -------------------------------------------------------
 -- Sound definitions
 -- -------------------------------------------------------
+
+-- Raw WoW FileDataIDs — passed to PlaySoundFile, which is more reliable than
+-- PlaySound(soundKitID) in The War Within. FileDataIDs differ from SoundKit IDs;
+-- these three are verified working in TWW (cross-referenced from BigWigs Media.lua).
 local SOUNDS = {
-    alarm   = (SOUNDKIT and SOUNDKIT.UI_RAID_WARNING)           or 567478,
-    gong    = (SOUNDKIT and SOUNDKIT.UI_CHALLENGE_MODE_COMPLETE) or 568633,
-    levelup = (SOUNDKIT and SOUNDKIT.UI_PLAYER_LEVEL_UP)        or 888079,
+    alarm   = 567397,  -- Raid Warning horn  (BigWigs Alarm.ogg)
+    gong    = 569200,  -- PvP bell chime     (BigWigs Long.ogg)
+    levelup = 569593,  -- WoW LevelUp fanfare (Sound/Spells/LevelUp.ogg, SoundKit 888)
 }
 
-local SOUND_FALLBACK = SOUNDKIT and SOUNDKIT.UI_RAID_WARNING or 567478
+local SOUND_FALLBACK_DEFAULT = 567397
 
--- Public accessor so UI.lua can preview sounds without duplicating the table.
+function MK_PlaySound(key, channel)
+    PlaySoundFile(SOUNDS[key] or SOUND_FALLBACK_DEFAULT, channel or "SFX")
+end
+
 function MK_GetSoundID(key)
-    return SOUNDS[key] or SOUND_FALLBACK
+    return SOUNDS[key] or SOUND_FALLBACK_DEFAULT
 end
 
 -- -------------------------------------------------------
@@ -223,8 +230,7 @@ function MK_TriggerAlert(milestone, currentPct, keystoneLevel, quantity, total)
 
     -- ── Sound ────────────────────────────────────────────
     if hasAlert(aType, "sound") then
-        local soundId = SOUNDS[profile.alertSound] or SOUND_FALLBACK
-        PlaySound(soundId, "Master")
+        MK_PlaySound(profile.alertSound)
     end
 
     -- ── Chat ─────────────────────────────────────────────

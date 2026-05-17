@@ -38,6 +38,7 @@ local DB_DEFAULTS = {
         hudFramePos     = nil, -- { point, x, y }
         hudFrameAlpha   = 0.8,
         hudLocked       = false,
+        uiState         = {},  -- AceGUI Frame status: top, left, width, height
     },
 }
 
