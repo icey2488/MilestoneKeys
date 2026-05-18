@@ -99,3 +99,12 @@ MilestoneKeys/
 ├── Predict.lua         — MDT route import & predictive pull alerts
 └── Libs/               — Bundled: Ace3, LibDataBroker, LibDBIcon
 ```
+
+---
+
+## For Contributors
+
+[`docs/API-NOTES.md`](docs/API-NOTES.md) contains the permanent technical
+reference — reverse-engineered API behaviour, known gotchas, and lessons from
+past debugging cycles. Read it before touching forces detection, sound playback,
+AceGUI backdrop opacity, or MDT integration.

@@ -13,7 +13,7 @@
 - Settings reorganized into labeled InlineGroup subsections: **Alerts** (sound, chat, frame, forces display), **HUD** (toggle, lock, opacity, preview), **Appearance** (alert frame opacity, panel opacity), **Behavior** (per-dungeon, party sync, predictive alerts, minimap).
 - Alert sound selection consolidated from three radio checkboxes to a single dropdown + Play button. Selection stored the same way (`db.profile.alertSound`); existing saved values carry forward.
 - All three opacity sliders (HUD, alert frame, options panel) now use `SetBackdropColor(0,0,0,alpha)` on a pure-black backdrop. Slider at 1.0 is now visually fully opaque with no game world visible through any frame.
-- Options panel opacity now iterates every `BACKGROUND`/`BORDER` draw-layer texture on the AceGUI root frame and applies the slider alpha directly, catching any sub-textures that `SetBackdropColor` alone does not reach. `ARTWORK`/`OVERLAY` layers are skipped so widgets remain fully legible.
+- Options panel opacity slider now achieves true full opacity at 1.0: the AceGUI Frame's default backdrop texture (`UI-DialogBox-Background`) has semi-transparent pixels baked in that `SetBackdropColor` cannot override; the fix replaces it once with `Interface\\Buttons\\WHITE8x8` (a solid tile) and drives all opacity via `SetBackdropColor(0,0,0,alpha)` — the same approach used by the HUD and Alert frames. See `docs/API-NOTES.md §2` for details.
 
 ### Notes
 - MDT predictive pull alerts are present in code but disabled in this release pending further testing. The MDT Route Import section (add milestones from pull data) is fully functional.
@@ -26,27 +26,18 @@
 - Nominal display mode (`237/585 forces`) now uses the correct raw kill count rather than the integer percent field.
 
 ### Documentation
-- CHANGELOG now contains a permanent API reference table for the TWW forces scenario criteria slot, preventing future regressions. See `[dev-fix-3]` entry below.
+- Permanent API reference for the TWW forces scenario criteria slot added to `docs/API-NOTES.md §1`, preventing future regressions.
 
 ## [dev-fix-3] - 2026-05-17
 ### Fixed
 - Forces percentage now computed correctly for The War Within (TWW) / Midnight.
+  See `docs/API-NOTES.md §1` for the full field layout and regression history.
 
-  **Resolved TWW scenario API layout** (do not change without re-testing in-game):
-  | Field | Meaning |
-  |---|---|
-  | `isWeightedProgress` | `true` → this is the forces criteria slot |
-  | `quantity` | Integer percent 0–100 (low precision; do not use as the primary value) |
-  | `totalQuantity` | Total enemies needed for 100% completion |
-  | `quantityString` | `"<rawKills>%"` — raw enemy kill count with a misleading `%` suffix; **not a percentage string**; parse leading digits only |
+  Previous bug: `dev-fix-2` matched the decimal regex `[%d%.]+` against `quantityString`, which parsed e.g. `"237%"` as `237.0`, then used that directly as `pct` — firing all milestones simultaneously. Fix: extract only the leading digit sequence `(%d+)` and divide by `totalQuantity`.
 
-  Decimal-precision percent must be computed by the addon: `(rawKills / totalQuantity) * 100`.
-
-  Previous bug: `dev-fix-2` matched the decimal regex `[%d%.]+` against `quantityString`, which parsed e.g. `"237%"` as `237.0`, then used that directly as `pct` — firing all milestones simultaneously. Fix: extract only the leading digit sequence `(%d+)` from `quantityString` and divide by `totalQuantity`.
-
-- `qty` passed to alert formatting (`MK_FormatForces`) is now `rawKills` (the actual enemy count), so nominal display mode correctly renders e.g. `237/585 forces`.
-- `pct` is clamped to `[0, 100]` after computation to guard against malformed API output.
-- Non-`isWeightedProgress` slots now cause an early `return` in `EvaluateForces` (forces slot is always `isWeightedProgress=true` in TWW; no division fallback needed).
+- `qty` passed to `MK_FormatForces` is now `rawKills` so nominal mode renders e.g. `237/585 forces`.
+- `pct` is clamped to `[0, 100]` after computation.
+- Non-`isWeightedProgress` slots now cause an early `return` in `EvaluateForces`.
 - **Diagnostics kept for one more verification run** — remove `[MK Step]`, `[MK Eval]`, `[MK Detect]` logging in follow-up commit after confirmation.
 
 ## [dev-fix-2] - 2026-05-16
