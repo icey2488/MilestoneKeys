@@ -95,7 +95,7 @@ local function GetAlertFrame()
     local MK      = _G["MilestoneKeys"]
     local profile = MK.db.profile
 
-    AlertFrame = CreateFrame("Frame", "MilestoneKeysAlertFrame", UIParent)
+    AlertFrame = CreateFrame("Frame", "MilestoneKeysAlertFrame", UIParent, "BackdropTemplate")
     AlertFrame:SetSize(420, 70)
     AlertFrame:SetFrameStrata("HIGH")
     AlertFrame:SetClampedToScreen(true)
@@ -119,10 +119,13 @@ local function GetAlertFrame()
         end
     end)
 
-    -- Backdrop
-    local bg = AlertFrame:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.72)
+    -- Backdrop — pure black base; alpha controlled by the opacity slider
+    AlertFrame:SetBackdrop({
+        bgFile  = "Interface\\Buttons\\WHITE8x8",
+        tile    = false, tileSize = 0,
+        insets  = { left = 0, right = 0, top = 0, bottom = 0 },
+    })
+    AlertFrame:SetBackdropColor(0, 0, 0, profile.alertFrameAlpha or 1.0)
 
     -- Accent bar (left edge)
     local accent = AlertFrame:CreateTexture(nil, "BORDER")
@@ -193,9 +196,8 @@ local function GetAlertFrame()
 
     AlertFrame.anim = ag
 
-    -- Restore saved position and alpha
+    -- Restore saved position
     ApplyFramePos(profile)
-    AlertFrame:SetAlpha(profile.alertFrameAlpha or 1.0)
 
     return AlertFrame
 end

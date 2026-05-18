@@ -79,11 +79,13 @@ local Panel = nil
 
 -- Apply alpha to the AceGUI Frame backdrop only.
 -- Does NOT touch the widget itself, so child widgets stay fully opaque.
+-- Uses SetBackdropColor (preferred; available when BackdropTemplate is present),
+-- with a fallback to the Bg texture in case the AceGUI version differs.
 local function ApplyPanelOpacity(frame, alpha)
-    if frame.frame and frame.frame.SetBackdropColor then
+    if not frame.frame then return end
+    if frame.frame.SetBackdropColor then
         frame.frame:SetBackdropColor(0, 0, 0, alpha)
-    end
-    if frame.frame and frame.frame.Bg then
+    elseif frame.frame.Bg then
         frame.frame.Bg:SetAlpha(alpha)
     end
 end
@@ -442,51 +444,40 @@ local function BuildPanel(MK)
     sep3:SetText("Settings")
     outerScroll:AddChild(sep3)
 
-    -- Alert Sound — radio-style list with per-sound preview, like BigWigs.
-    local soundLabel = AG:Create("Label")
-    soundLabel:SetText("Alert Sound")
-    soundLabel:SetFullWidth(true)
-    outerScroll:AddChild(soundLabel)
+    -- ── A. Alerts ────────────────────────────────────────
+    local alertsGroup = AG:Create("InlineGroup")
+    alertsGroup:SetTitle("Alerts")
+    alertsGroup:SetFullWidth(true)
+    alertsGroup:SetLayout("Flow")
+    outerScroll:AddChild(alertsGroup)
 
-    local SOUND_LIST = {
-        { key = "alarm",   label = "Alarm Horn" },
-        { key = "gong",    label = "Gong" },
-        { key = "levelup", label = "Level Up" },
-    }
+    -- Sound: single dropdown + Play button
+    local soundRow = AG:Create("SimpleGroup")
+    soundRow:SetLayout("Flow")
+    soundRow:SetFullWidth(true)
+    alertsGroup:AddChild(soundRow)
 
-    local soundChkMap = {}
+    local soundDrop = AG:Create("Dropdown")
+    soundDrop:SetLabel("Alert sound")
+    soundDrop:SetWidth(180)
+    soundDrop:SetList(
+        { alarm = "Alarm Horn", gong = "Gong", levelup = "Level Up" },
+        { "alarm", "gong", "levelup" }
+    )
+    soundDrop:SetValue(MK.db.profile.alertSound or "alarm")
+    soundDrop:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.alertSound = val
+    end)
+    soundRow:AddChild(soundDrop)
 
-    for _, snd in ipairs(SOUND_LIST) do
-        local k   = snd.key  -- explicit per-iteration capture for closures
-        local row = AG:Create("SimpleGroup")
-        row:SetLayout("Flow")
-        row:SetFullWidth(true)
-        outerScroll:AddChild(row)
+    local soundPlayBtn = AG:Create("Button")
+    soundPlayBtn:SetText("Play")
+    soundPlayBtn:SetWidth(60)
+    soundPlayBtn:SetCallback("OnClick", function()
+        MK_PlaySound(MK.db.profile.alertSound or "alarm")
+    end)
+    soundRow:AddChild(soundPlayBtn)
 
-        local chk = AG:Create("CheckBox")
-        chk:SetLabel(snd.label)
-        chk:SetValue(MK.db.profile.alertSound == k)
-        chk:SetWidth(185)
-        chk:SetCallback("OnValueChanged", function(_, _, val)
-            if not val then chk:SetValue(true); return end
-            MK.db.profile.alertSound = k
-            for key, c in pairs(soundChkMap) do
-                if key ~= k then c:SetValue(false) end
-            end
-        end)
-        soundChkMap[k] = chk
-        row:AddChild(chk)
-
-        local playBtn = AG:Create("Button")
-        playBtn:SetText("Play")
-        playBtn:SetWidth(60)
-        playBtn:SetCallback("OnClick", function()
-            MK_PlaySound(k)
-        end)
-        row:AddChild(playBtn)
-    end
-
-    -- Chat output toggle
     local chatChk = AG:Create("CheckBox")
     chatChk:SetLabel("Chat output")
     chatChk:SetValue(MK.db.profile.chatOutput)
@@ -494,10 +485,9 @@ local function BuildPanel(MK)
     chatChk:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.chatOutput = val
     end)
-    outerScroll:AddChild(chatChk)
+    alertsGroup:AddChild(chatChk)
     AddTooltip(chatChk, "Chat Output", "Print a message to chat when a milestone is crossed.")
 
-    -- Frame alert toggle
     local frameChk = AG:Create("CheckBox")
     frameChk:SetLabel("On-screen frame alerts")
     frameChk:SetValue(MK.db.profile.frameAlerts)
@@ -505,10 +495,9 @@ local function BuildPanel(MK)
     frameChk:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.frameAlerts = val
     end)
-    outerScroll:AddChild(frameChk)
+    alertsGroup:AddChild(frameChk)
     AddTooltip(frameChk, "On-Screen Frame Alerts", "Show a large banner on screen when a milestone is crossed.")
 
-    -- Forces display: single dropdown covering all format options
     local displayDrop = AG:Create("Dropdown")
     displayDrop:SetLabel("Forces display")
     displayDrop:SetWidth(240)
@@ -525,28 +514,42 @@ local function BuildPanel(MK)
     displayDrop:SetCallback("OnValueChanged", function(_, _, val)
         MK.db.profile.options.forcesDisplayMode = val
     end)
-    outerScroll:AddChild(displayDrop)
+    alertsGroup:AddChild(displayDrop)
     AddTooltip(displayDrop, "Forces Display",
         "How forces are shown in alerts and tooltips.\nNominal: raw count (e.g. 382/450). Percentage: e.g. 84.9%.")
 
-    -- Alert frame opacity slider
-    local alphaSlider = AG:Create("Slider")
-    alphaSlider:SetLabel("Alert Frame Opacity")
-    alphaSlider:SetSliderValues(0.2, 1.0, 0.05)
-    alphaSlider:SetValue(MK.db.profile.alertFrameAlpha or 1.0)
-    alphaSlider:SetWidth(200)
-    alphaSlider:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.alertFrameAlpha = val
-        local af = MK_GetAlertFrame()
-        if af then af:SetAlpha(val) end
-    end)
-    outerScroll:AddChild(alphaSlider)
-    AddTooltip(alphaSlider, "Alert Frame Opacity",
-        "Transparency of the on-screen alert banner.\n0.2 = nearly invisible  •  1.0 = fully opaque.")
+    -- ── B. HUD ───────────────────────────────────────────
+    local hudGroup = AG:Create("InlineGroup")
+    hudGroup:SetTitle("HUD")
+    hudGroup:SetFullWidth(true)
+    hudGroup:SetLayout("Flow")
+    outerScroll:AddChild(hudGroup)
 
-    -- HUD frame opacity slider
+    local hudChk = AG:Create("CheckBox")
+    hudChk:SetLabel("Show milestone HUD during keys")
+    hudChk:SetValue(MK.db.profile.options.showHUD)
+    hudChk:SetFullWidth(true)
+    hudChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.showHUD = val
+    end)
+    hudGroup:AddChild(hudChk)
+    AddTooltip(hudChk, "Milestone HUD",
+        "Show a persistent tracker frame during Mythic+ runs\nlisting all milestones and their completion status.")
+
+    local hudLockChk = AG:Create("CheckBox")
+    hudLockChk:SetLabel("Lock HUD position")
+    hudLockChk:SetValue(MK.db.profile.hudLocked or false)
+    hudLockChk:SetWidth(180)
+    hudLockChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.hudLocked = val
+        MK_HUD_SetLocked(val)
+    end)
+    hudGroup:AddChild(hudLockChk)
+    AddTooltip(hudLockChk, "Lock HUD Position",
+        "Prevent the HUD from being accidentally dragged.\nWhen locked the frame is click-through.")
+
     local hudAlphaSlider = AG:Create("Slider")
-    hudAlphaSlider:SetLabel("HUD Frame Opacity")
+    hudAlphaSlider:SetLabel("HUD opacity")
     hudAlphaSlider:SetSliderValues(0.1, 1.0, 0.05)
     hudAlphaSlider:SetValue(MK.db.profile.hudFrameAlpha or 0.8)
     hudAlphaSlider:SetWidth(200)
@@ -554,11 +557,42 @@ local function BuildPanel(MK)
         MK.db.profile.hudFrameAlpha = val
         MK_HUD_SetAlpha(val)
     end)
-    outerScroll:AddChild(hudAlphaSlider)
-    AddTooltip(hudAlphaSlider, "HUD Frame Opacity",
-        "Transparency of the in-run milestone tracker.\n0.1 = nearly invisible  •  1.0 = fully opaque.")
+    hudGroup:AddChild(hudAlphaSlider)
+    AddTooltip(hudAlphaSlider, "HUD Opacity",
+        "Transparency of the in-run milestone tracker backdrop.\n0.1 = nearly invisible  •  1.0 = fully opaque black.")
 
-    -- Options panel opacity slider
+    local hudPreviewBtn = AG:Create("Button")
+    hudPreviewBtn:SetText(MK_HUD_IsPreview() and "Hide HUD Preview" or "Preview HUD")
+    hudPreviewBtn:SetWidth(160)
+    hudPreviewBtn:SetCallback("OnClick", function()
+        MK_HUD_TogglePreview()
+        hudPreviewBtn:SetText(MK_HUD_IsPreview() and "Hide HUD Preview" or "Preview HUD")
+    end)
+    hudGroup:AddChild(hudPreviewBtn)
+    AddTooltip(hudPreviewBtn, "Preview HUD",
+        "Show or hide the milestone HUD outside of a key\nso you can reposition and inspect it.")
+
+    -- ── C. Appearance ─────────────────────────────────────
+    local appearGroup = AG:Create("InlineGroup")
+    appearGroup:SetTitle("Appearance")
+    appearGroup:SetFullWidth(true)
+    appearGroup:SetLayout("Flow")
+    outerScroll:AddChild(appearGroup)
+
+    local alphaSlider = AG:Create("Slider")
+    alphaSlider:SetLabel("Alert frame opacity")
+    alphaSlider:SetSliderValues(0.2, 1.0, 0.05)
+    alphaSlider:SetValue(MK.db.profile.alertFrameAlpha or 1.0)
+    alphaSlider:SetWidth(200)
+    alphaSlider:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.alertFrameAlpha = val
+        local af = MK_GetAlertFrame()
+        if af then af:SetBackdropColor(0, 0, 0, val) end
+    end)
+    appearGroup:AddChild(alphaSlider)
+    AddTooltip(alphaSlider, "Alert Frame Opacity",
+        "Transparency of the on-screen alert banner backdrop.\n0.2 = nearly invisible  •  1.0 = fully opaque black.")
+
     local panelOpacitySlider = AG:Create("Slider")
     panelOpacitySlider:SetLabel("Options panel opacity")
     panelOpacitySlider:SetSliderValues(0.30, 1.00, 0.05)
@@ -568,36 +602,50 @@ local function BuildPanel(MK)
         MK.db.profile.options.panelOpacity = val
         ApplyPanelOpacity(frame, val)
     end)
-    outerScroll:AddChild(panelOpacitySlider)
+    appearGroup:AddChild(panelOpacitySlider)
     AddTooltip(panelOpacitySlider, "Options Panel Opacity",
         "Sets the background opacity of this options panel.\nText and buttons remain fully visible.")
 
-    -- HUD preview toggle
-    local hudPreviewBtn = AG:Create("Button")
-    hudPreviewBtn:SetText(MK_HUD_IsPreview() and "Hide HUD Preview" or "Preview HUD")
-    hudPreviewBtn:SetWidth(160)
-    hudPreviewBtn:SetCallback("OnClick", function()
-        MK_HUD_TogglePreview()
-        hudPreviewBtn:SetText(MK_HUD_IsPreview() and "Hide HUD Preview" or "Preview HUD")
-    end)
-    outerScroll:AddChild(hudPreviewBtn)
-    AddTooltip(hudPreviewBtn, "Preview HUD",
-        "Show or hide the milestone HUD outside of a key\nso you can reposition and inspect it.")
+    -- ── D. Behavior ───────────────────────────────────────
+    local behaviorGroup = AG:Create("InlineGroup")
+    behaviorGroup:SetTitle("Behavior")
+    behaviorGroup:SetFullWidth(true)
+    behaviorGroup:SetLayout("Flow")
+    outerScroll:AddChild(behaviorGroup)
 
-    -- HUD lock checkbox
-    local hudLockChk = AG:Create("CheckBox")
-    hudLockChk:SetLabel("Lock HUD position")
-    hudLockChk:SetValue(MK.db.profile.hudLocked or false)
-    hudLockChk:SetWidth(180)
-    hudLockChk:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.hudLocked = val
-        MK_HUD_SetLocked(val)
+    local perDungeonChk = AG:Create("CheckBox")
+    perDungeonChk:SetLabel("Per-dungeon profiles (uses above profile during run)")
+    perDungeonChk:SetValue(MK.db.profile.options.perDungeonProfiles)
+    perDungeonChk:SetFullWidth(true)
+    perDungeonChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.perDungeonProfiles = val
     end)
-    outerScroll:AddChild(hudLockChk)
-    AddTooltip(hudLockChk, "Lock HUD Position",
-        "Prevent the HUD from being accidentally dragged.\nWhen locked the frame is click-through.")
+    behaviorGroup:AddChild(perDungeonChk)
+    AddTooltip(perDungeonChk, "Per-Dungeon Profiles",
+        "Store a separate milestone set for each dungeon.\nThe profile selected above is used during that dungeon's run.")
 
-    -- Minimap button toggle
+    local syncChk = AG:Create("CheckBox")
+    syncChk:SetLabel("Broadcast milestones to party")
+    syncChk:SetValue(MK.db.profile.options.partySync)
+    syncChk:SetWidth(240)
+    syncChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.partySync = val
+    end)
+    behaviorGroup:AddChild(syncChk)
+    AddTooltip(syncChk, "Party Sync",
+        "Send a party chat message via MKSYNV1 prefix\nwhen you cross a milestone threshold.")
+
+    local predictChk = AG:Create("CheckBox")
+    predictChk:SetLabel("MDT predictive pull alerts")
+    predictChk:SetValue(MK.db.profile.options.predictiveAlerts)
+    predictChk:SetWidth(220)
+    predictChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.predictiveAlerts = val
+    end)
+    behaviorGroup:AddChild(predictChk)
+    AddTooltip(predictChk, "MDT Predictive Alerts",
+        "Warn in chat when the next MDT pull will push you\npast a milestone threshold. Requires MDT.")
+
     local minimapChk = AG:Create("CheckBox")
     minimapChk:SetLabel("Show minimap button")
     minimapChk:SetValue(MK.db.profile.options.minimapEnabled)
@@ -612,58 +660,10 @@ local function BuildPanel(MK)
             end
         end
     end)
-    outerScroll:AddChild(minimapChk)
+    behaviorGroup:AddChild(minimapChk)
     AddTooltip(minimapChk, "Minimap Button", "Toggle the MilestoneKeys icon on the minimap.")
 
-    -- HUD toggle
-    local hudChk = AG:Create("CheckBox")
-    hudChk:SetLabel("Show milestone HUD during keys")
-    hudChk:SetValue(MK.db.profile.options.showHUD)
-    hudChk:SetFullWidth(true)
-    hudChk:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.options.showHUD = val
-    end)
-    outerScroll:AddChild(hudChk)
-    AddTooltip(hudChk, "Milestone HUD",
-        "Show a persistent tracker frame during Mythic+ runs\nlisting all milestones and their completion status.")
-
-    -- Per-dungeon profiles toggle
-    local perDungeonChk = AG:Create("CheckBox")
-    perDungeonChk:SetLabel("Per-dungeon profiles (uses above profile during run)")
-    perDungeonChk:SetValue(MK.db.profile.options.perDungeonProfiles)
-    perDungeonChk:SetFullWidth(true)
-    perDungeonChk:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.options.perDungeonProfiles = val
-    end)
-    outerScroll:AddChild(perDungeonChk)
-    AddTooltip(perDungeonChk, "Per-Dungeon Profiles",
-        "Store a separate milestone set for each dungeon.\nThe profile selected above is used during that dungeon's run.")
-
-    -- Party sync toggle
-    local syncChk = AG:Create("CheckBox")
-    syncChk:SetLabel("Broadcast milestones to party")
-    syncChk:SetValue(MK.db.profile.options.partySync)
-    syncChk:SetWidth(240)
-    syncChk:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.options.partySync = val
-    end)
-    outerScroll:AddChild(syncChk)
-    AddTooltip(syncChk, "Party Sync",
-        "Send a party chat message via MKSYNV1 prefix\nwhen you cross a milestone threshold.")
-
-    -- Predictive alerts toggle
-    local predictChk = AG:Create("CheckBox")
-    predictChk:SetLabel("MDT predictive pull alerts")
-    predictChk:SetValue(MK.db.profile.options.predictiveAlerts)
-    predictChk:SetWidth(220)
-    predictChk:SetCallback("OnValueChanged", function(_, _, val)
-        MK.db.profile.options.predictiveAlerts = val
-    end)
-    outerScroll:AddChild(predictChk)
-    AddTooltip(predictChk, "MDT Predictive Alerts",
-        "Warn in chat when the next MDT pull will push you\npast a milestone threshold. Requires MDT.")
-
-    -- Test button
+    -- ── Bottom row (outside groups) ───────────────────────
     local sep4 = AG:Create("Heading")
     sep4:SetFullWidth(true)
     sep4:SetText("")

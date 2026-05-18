@@ -101,16 +101,19 @@ function MK_HUD_Init(MK)
     HudMK = MK
     local profile = MK.db.profile
 
-    HudFrame = CreateFrame("Frame", "MilestoneKeysHUDFrame", UIParent)
+    HudFrame = CreateFrame("Frame", "MilestoneKeysHUDFrame", UIParent, "BackdropTemplate")
     HudFrame:SetWidth(280)
     HudFrame:SetHeight(50)
     HudFrame:SetFrameStrata("MEDIUM")
     HudFrame:SetClampedToScreen(true)
     HudFrame:Hide()
 
-    local bg = HudFrame:CreateTexture(nil, "BACKGROUND")
-    bg:SetAllPoints()
-    bg:SetColorTexture(0, 0, 0, 0.5)
+    HudFrame:SetBackdrop({
+        bgFile  = "Interface\\Buttons\\WHITE8x8",
+        tile    = false, tileSize = 0,
+        insets  = { left = 0, right = 0, top = 0, bottom = 0 },
+    })
+    HudFrame:SetBackdropColor(0, 0, 0, profile.hudFrameAlpha or 0.8)
 
     local accent = HudFrame:CreateTexture(nil, "BORDER")
     accent:SetWidth(4)
@@ -134,7 +137,6 @@ function MK_HUD_Init(MK)
     end)
 
     ApplyHudPos(profile)
-    HudFrame:SetAlpha(profile.hudFrameAlpha or 0.8)
     MK_HUD_SetLocked(profile.hudLocked or false)
 end
 
@@ -162,7 +164,7 @@ function MK_HUD_OnMilestoneTriggered(index)
 end
 
 function MK_HUD_SetAlpha(alpha)
-    if HudFrame then HudFrame:SetAlpha(alpha) end
+    if HudFrame then HudFrame:SetBackdropColor(0, 0, 0, alpha) end
 end
 
 function MK_HUD_SetLocked(locked)

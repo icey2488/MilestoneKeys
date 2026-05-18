@@ -10,6 +10,9 @@
 - Minimum resize guard: the panel cannot be shrunk below 700 × 450 (`SetResizeBounds` with `SetMinResize` fallback).
 - "Reset window" button at the bottom of the Settings section: wipes saved position/size and reopens the panel at defaults.
 - Options panel opacity slider (0.30–1.00) in Settings: fades the backdrop only, leaving all text and interactive widgets fully opaque. Saved to `db.profile.options.panelOpacity`. Useful for stream overlays and accessibility.
+- Settings reorganized into labeled InlineGroup subsections: **Alerts** (sound, chat, frame, forces display), **HUD** (toggle, lock, opacity, preview), **Appearance** (alert frame opacity, panel opacity), **Behavior** (per-dungeon, party sync, predictive alerts, minimap).
+- Alert sound selection consolidated from three radio checkboxes to a single dropdown + Play button. Selection stored the same way (`db.profile.alertSound`); existing saved values carry forward.
+- All three opacity sliders (HUD, alert frame, options panel) now use `SetBackdropColor(0,0,0,alpha)` on a pure-black backdrop. Slider at 1.0 is now visually fully opaque with no game world visible through any frame.
 
 ### Notes
 - MDT predictive pull alerts are present in code but disabled in this release pending further testing. The MDT Route Import section (add milestones from pull data) is fully functional.
