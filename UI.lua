@@ -78,36 +78,24 @@ end
 local Panel = nil
 
 -- Apply alpha to the AceGUI Frame backdrop only.
--- Hits every BACKGROUND/BORDER layer texture on the root frame so that all
--- AceGUI versions reach fully opaque at 1.0. Never touches ARTWORK/OVERLAY,
--- so text labels, buttons, and interactive widgets remain at full opacity.
+-- The AceGUI Frame uses "Interface\\DialogFrame\\UI-DialogBox-Background" which has
+-- per-pixel alpha baked into the texture file; SetBackdropColor alone cannot reach
+-- full opacity through that alpha. We swap the bgFile to WHITE8x8 (a fully solid
+-- tile) once, then drive opacity solely through SetBackdropColor — same pattern
+-- used by the HUD and Alert frames.
 local function ApplyPanelOpacity(frame, alpha)
     if not frame or not frame.frame then return end
     local root = frame.frame
-
-    local function applyToFrame(f)
-        if f.SetBackdropColor then
-            f:SetBackdropColor(0, 0, 0, alpha)
-        end
-        for _, region in ipairs({f:GetRegions()}) do
-            if region:GetObjectType() == "Texture" then
-                local layer = region:GetDrawLayer()
-                if layer == "BACKGROUND" or layer == "BORDER" then
-                    region:SetAlpha(alpha)
-                end
-            end
-        end
+    if not root._mkBgPatched then
+        root:SetBackdrop({
+            bgFile   = "Interface\\Buttons\\WHITE8x8",
+            edgeFile = "Interface\\DialogFrame\\UI-DialogBox-Border",
+            tile = true, tileSize = 32, edgeSize = 32,
+            insets = { left = 8, right = 8, top = 8, bottom = 8 }
+        })
+        root._mkBgPatched = true
     end
-
-    applyToFrame(root)
-
-    -- AceGUI's body background lives on a child Frame, not the root frame.
-    -- Iterate all immediate Frame-type children to catch it.
-    for _, child in ipairs({root:GetChildren()}) do
-        if child:GetObjectType() == "Frame" then
-            applyToFrame(child)
-        end
-    end
+    root:SetBackdropColor(0, 0, 0, alpha)
 end
 
 local function BuildPanel(MK)
@@ -735,30 +723,6 @@ local function BuildPanel(MK)
     end)
 
     RebuildList()
-
-    -- DIAGNOSTIC: enumerate AceGUI frame regions/children to find transparent layers.
-    -- Remove this block after in-game verification.
-    do
-        local root = frame.frame
-        print("=== AceGUI Frame layer inspection ===")
-        print("frame.frame regions:")
-        for i, region in ipairs({root:GetRegions()}) do
-            print(string.format("  [%d] type=%s  layer=%s",
-                i, region:GetObjectType(),
-                region.GetDrawLayer and region:GetDrawLayer() or "n/a"
-            ))
-        end
-        print("frame.frame children + their regions:")
-        for i, child in ipairs({root:GetChildren()}) do
-            print(string.format("  child[%d] type=%s", i, child:GetObjectType()))
-            for j, region in ipairs({child:GetRegions()}) do
-                print(string.format("    [%d] type=%s  layer=%s",
-                    j, region:GetObjectType(),
-                    region.GetDrawLayer and region:GetDrawLayer() or "n/a"
-                ))
-            end
-        end
-    end
 
     return frame
 end
