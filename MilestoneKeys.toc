@@ -4,6 +4,7 @@
 ## Author: You
 ## Version: 1.1.2
 
+## X-Curse-Project-ID: 1546520
 ## SavedVariables: MilestoneKeysDB
 
 # Libraries
