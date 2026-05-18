@@ -31,6 +31,7 @@ local DB_DEFAULTS = {
             predictiveAlerts   = false,
             forcesDisplayMode  = "pct_0",  -- pct_0, pct_1, pct_2, nominal
             showHUD            = true,
+            panelOpacity       = 1.0,
         },
         minimapPos      = {},  -- LibDBIcon writes position here
         alertFramePos   = nil, -- { point, x, y } saved when locked; nil = centered

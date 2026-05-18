@@ -77,6 +77,17 @@ end
 -- -------------------------------------------------------
 local Panel = nil
 
+-- Apply alpha to the AceGUI Frame backdrop only.
+-- Does NOT touch the widget itself, so child widgets stay fully opaque.
+local function ApplyPanelOpacity(frame, alpha)
+    if frame.frame and frame.frame.SetBackdropColor then
+        frame.frame:SetBackdropColor(0, 0, 0, alpha)
+    end
+    if frame.frame and frame.frame.Bg then
+        frame.frame.Bg:SetAlpha(alpha)
+    end
+end
+
 local function BuildPanel(MK)
     local selectedMapID    = nil   -- nil = global profile
     local RebuildList      = nil   -- forward declaration
@@ -113,6 +124,8 @@ local function BuildPanel(MK)
     elseif frame.frame.SetMinResize then
         frame.frame:SetMinResize(700, 450)
     end
+
+    ApplyPanelOpacity(frame, MK.db.profile.options.panelOpacity or 1.0)
 
     -- Single scrollable container holding all sections.
     local outerScroll = AG:Create("ScrollFrame")
@@ -544,6 +557,20 @@ local function BuildPanel(MK)
     outerScroll:AddChild(hudAlphaSlider)
     AddTooltip(hudAlphaSlider, "HUD Frame Opacity",
         "Transparency of the in-run milestone tracker.\n0.1 = nearly invisible  •  1.0 = fully opaque.")
+
+    -- Options panel opacity slider
+    local panelOpacitySlider = AG:Create("Slider")
+    panelOpacitySlider:SetLabel("Options panel opacity")
+    panelOpacitySlider:SetSliderValues(0.30, 1.00, 0.05)
+    panelOpacitySlider:SetValue(MK.db.profile.options.panelOpacity or 1.0)
+    panelOpacitySlider:SetWidth(200)
+    panelOpacitySlider:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.options.panelOpacity = val
+        ApplyPanelOpacity(frame, val)
+    end)
+    outerScroll:AddChild(panelOpacitySlider)
+    AddTooltip(panelOpacitySlider, "Options Panel Opacity",
+        "Sets the background opacity of this options panel.\nText and buttons remain fully visible.")
 
     -- HUD preview toggle
     local hudPreviewBtn = AG:Create("Button")

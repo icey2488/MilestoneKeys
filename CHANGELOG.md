@@ -9,6 +9,7 @@
 - Off-screen safety: saved position is cleared if the frame would land entirely outside the current screen resolution (e.g. after switching from an ultrawide to a laptop).
 - Minimum resize guard: the panel cannot be shrunk below 700 × 450 (`SetResizeBounds` with `SetMinResize` fallback).
 - "Reset window" button at the bottom of the Settings section: wipes saved position/size and reopens the panel at defaults.
+- Options panel opacity slider (0.30–1.00) in Settings: fades the backdrop only, leaving all text and interactive widgets fully opaque. Saved to `db.profile.options.panelOpacity`. Useful for stream overlays and accessibility.
 
 ### Notes
 - MDT predictive pull alerts are present in code but disabled in this release pending further testing. The MDT Route Import section (add milestones from pull data) is fully functional.
