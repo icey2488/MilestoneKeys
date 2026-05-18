@@ -55,6 +55,9 @@ Store a separate milestone set for each dungeon. When enabled, the profile match
 ### MDT Route Import
 If Mythic Dungeon Tools is installed, the config panel shows a **MDT Route Import** section. Pick a saved route and a pull number to calculate the forces % at that pull, then add it as a milestone with one click.
 
+### MDT Predictive Alerts
+With MDT installed and **MDT predictive pull alerts** enabled (Behavior group), MilestoneKeys warns you in chat when the *next* pull in your active MDT route will push forces past a milestone threshold — before you engage the pack.
+
 ### Party sync
 Optionally broadcasts a party chat message (via `MKSYNV1` prefix) when you cross a milestone, so the group sees your progress.
 

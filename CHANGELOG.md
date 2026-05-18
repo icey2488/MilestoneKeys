@@ -2,6 +2,26 @@
 
 ## [Unreleased]
 
+## [1.1.2] - 2026-05-17
+### Added
+- Options panel opacity slider (Appearance group): fades the backdrop only, leaving all widgets fully opaque. Saved to `db.profile.options.panelOpacity`.
+- Reset Window button in Settings: wipes saved position and size, reopens the panel at defaults.
+- Options panel position and dimensions now persist across sessions via `AceGUI Frame:SetStatusTable()`.
+- Location-aware dungeon auto-selection: options panel auto-selects the current dungeon when opened during or between runs, with a coloured indicator label.
+- MDT predictive pull alerts now production-ready: warns in chat when the next MDT pull will cross a milestone threshold. Verified working in live M+ keys. Enabled via the Behavior group toggle.
+
+### Changed
+- Settings section reorganized into four labeled subsections: **Alerts**, **HUD**, **Appearance**, **Behavior**.
+- Alert sound selection consolidated from three radio checkboxes into a single dropdown with a Play preview button.
+- All three opacity sliders (HUD, Alert Frame, Options Panel) now reach fully opaque at 1.0. Root cause was the AceGUI default backdrop texture (`UI-DialogBox-Background`) having semi-transparent pixels baked in; fix replaces it with `Interface\\Buttons\\WHITE8x8`.
+- Default options panel size increased to 820×620 so milestone row buttons sit side-by-side without wrapping.
+
+### Fixed
+- Forces criteria detection for TWW/Midnight: `isWeightedProgress = true` is now the sole detection signal; the pre-TWW `flags & 0x80` check no longer works (all flags are 0 in current API).
+- Decimal percentage precision: computed from raw kill counts via `(%d+)` parse of `quantityString`, divided by `totalQuantity`. Previous approach using `[%d%.]+` parsed `"237%"` as `237.0` and fired all milestones simultaneously.
+- Options panel backdrop no longer leaks transparency at slider 1.0 (bgFile swap fix).
+- Sound preview buttons play the correct sound per button (Lua closure capture fix).
+
 ## [1.1.1] - 2026-05-17
 ### Added
 - Options panel default width increased to 820 × 620 (was 540 × 520) so milestone row buttons (All / None) sit side by side without wrapping.
@@ -14,9 +34,6 @@
 - Alert sound selection consolidated from three radio checkboxes to a single dropdown + Play button. Selection stored the same way (`db.profile.alertSound`); existing saved values carry forward.
 - All three opacity sliders (HUD, alert frame, options panel) now use `SetBackdropColor(0,0,0,alpha)` on a pure-black backdrop. Slider at 1.0 is now visually fully opaque with no game world visible through any frame.
 - Options panel opacity slider now achieves true full opacity at 1.0: the AceGUI Frame's default backdrop texture (`UI-DialogBox-Background`) has semi-transparent pixels baked in that `SetBackdropColor` cannot override; the fix replaces it once with `Interface\\Buttons\\WHITE8x8` (a solid tile) and drives all opacity via `SetBackdropColor(0,0,0,alpha)` — the same approach used by the HUD and Alert frames. See `docs/API-NOTES.md §2` for details.
-
-### Notes
-- MDT predictive pull alerts are present in code but disabled in this release pending further testing. The MDT Route Import section (add milestones from pull data) is fully functional.
 
 ## [1.1.0] - 2026-05-17
 ### Fixed

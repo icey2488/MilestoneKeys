@@ -1,7 +1,7 @@
 # MilestoneKeys — API Notes & Technical Reference
 
 Permanent reference for maintainers. Covers lessons reverse-engineered during
-the v1.0.x → v1.1.1 debugging cycles. New API lessons belong here, not in
+the v1.0.x → v1.1.2 development cycle. New API lessons belong here, not in
 CHANGELOG entries.
 
 ---
@@ -253,6 +253,13 @@ tracking via `SCENARIO_CRITERIA_UPDATE` + `GetCriteriaInfo` is viable.
 WeakAuras discontinued for retail in Midnight; the Classic version continues.
 Players migrating from WA-heavy setups are actively looking for replacement
 audio cues — this is MilestoneKeys' primary growth opportunity.
+
+### MDT Predictive Alerts — graduation status
+
+MDT predictive pull alerts graduated from experimental to production-ready in
+v1.1.2. Verified working in live M+ keys across multiple dungeons during
+pre-release testing. The feature is opt-in via the Behavior group toggle and
+requires MDT to be installed and a route to be active.
 
 ### Addon design positioning
 
