@@ -1,6 +1,9 @@
 # Claude Code local settings
 .claude/
 
+# BigWigs packager output
+.release/
+
 # OS
 .DS_Store
 Thumbs.db
