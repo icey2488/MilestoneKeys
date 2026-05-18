@@ -78,15 +78,34 @@ end
 local Panel = nil
 
 -- Apply alpha to the AceGUI Frame backdrop only.
--- Does NOT touch the widget itself, so child widgets stay fully opaque.
--- Uses SetBackdropColor (preferred; available when BackdropTemplate is present),
--- with a fallback to the Bg texture in case the AceGUI version differs.
+-- Hits every BACKGROUND/BORDER layer texture on the root frame so that all
+-- AceGUI versions reach fully opaque at 1.0. Never touches ARTWORK/OVERLAY,
+-- so text labels, buttons, and interactive widgets remain at full opacity.
 local function ApplyPanelOpacity(frame, alpha)
-    if not frame.frame then return end
-    if frame.frame.SetBackdropColor then
-        frame.frame:SetBackdropColor(0, 0, 0, alpha)
-    elseif frame.frame.Bg then
-        frame.frame.Bg:SetAlpha(alpha)
+    if not frame or not frame.frame then return end
+    local root = frame.frame
+
+    if root.SetBackdropColor then
+        root:SetBackdropColor(0, 0, 0, alpha)
+    end
+    if root.SetBackdropBorderColor then
+        root:SetBackdropBorderColor(0.6, 0.6, 0.6, 1)
+    end
+
+    for _, region in ipairs({root:GetRegions()}) do
+        if region:GetObjectType() == "Texture" then
+            local layer = region:GetDrawLayer()
+            if layer == "BACKGROUND" or layer == "BORDER" then
+                region:SetAlpha(alpha)
+            end
+        end
+    end
+
+    if frame.content and frame.content.GetParent then
+        local contentParent = frame.content:GetParent()
+        if contentParent and contentParent ~= root and contentParent.SetBackdropColor then
+            contentParent:SetBackdropColor(0, 0, 0, alpha)
+        end
     end
 end
 
@@ -715,6 +734,40 @@ local function BuildPanel(MK)
     end)
 
     RebuildList()
+
+    -- DIAGNOSTIC: enumerate AceGUI frame regions/children to find transparent layers.
+    -- Remove this block after in-game verification.
+    do
+        local root = frame.frame
+        print("=== AceGUI Frame layer inspection ===")
+        print("frame.frame regions:")
+        for i, region in ipairs({root:GetRegions()}) do
+            print(string.format("  [%d] %s  type=%s  drawLayer=%s",
+                i,
+                region:GetName() or "<unnamed>",
+                region:GetObjectType(),
+                region.GetDrawLayer and region:GetDrawLayer() or "n/a"
+            ))
+        end
+        print("frame.frame children:")
+        for i, child in ipairs({root:GetChildren()}) do
+            print(string.format("  [%d] %s  type=%s",
+                i,
+                child:GetName() or "<unnamed>",
+                child:GetObjectType()
+            ))
+        end
+        if frame.content then
+            print("frame.content regions:")
+            for i, region in ipairs({frame.content:GetRegions()}) do
+                print(string.format("  [%d] %s  type=%s",
+                    i,
+                    region:GetName() or "<unnamed>",
+                    region:GetObjectType()
+                ))
+            end
+        end
+    end
 
     return frame
 end

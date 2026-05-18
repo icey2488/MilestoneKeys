@@ -13,6 +13,7 @@
 - Settings reorganized into labeled InlineGroup subsections: **Alerts** (sound, chat, frame, forces display), **HUD** (toggle, lock, opacity, preview), **Appearance** (alert frame opacity, panel opacity), **Behavior** (per-dungeon, party sync, predictive alerts, minimap).
 - Alert sound selection consolidated from three radio checkboxes to a single dropdown + Play button. Selection stored the same way (`db.profile.alertSound`); existing saved values carry forward.
 - All three opacity sliders (HUD, alert frame, options panel) now use `SetBackdropColor(0,0,0,alpha)` on a pure-black backdrop. Slider at 1.0 is now visually fully opaque with no game world visible through any frame.
+- Options panel opacity now iterates every `BACKGROUND`/`BORDER` draw-layer texture on the AceGUI root frame and applies the slider alpha directly, catching any sub-textures that `SetBackdropColor` alone does not reach. `ARTWORK`/`OVERLAY` layers are skipped so widgets remain fully legible.
 
 ### Notes
 - MDT predictive pull alerts are present in code but disabled in this release pending further testing. The MDT Route Import section (add milestones from pull data) is fully functional.
