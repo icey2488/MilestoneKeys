@@ -111,3 +111,8 @@ MilestoneKeys/
 reference — reverse-engineered API behaviour, known gotchas, and lessons from
 past debugging cycles. Read it before touching forces detection, sound playback,
 AceGUI backdrop opacity, or MDT integration.
+
+[`docs/RELEASING.md`](docs/RELEASING.md) covers the per-patch TOC bump and the
+BigWigs packager release process. Read it before cutting a release — and note
+that new Mythic+ seasons need no dungeon data changes, only an `## Interface`
+bump.

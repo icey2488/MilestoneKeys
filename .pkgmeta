@@ -1,5 +1,18 @@
 package-as: MilestoneKeys
 
+# Ship the hand-curated CHANGELOG.md instead of the packager's commit-log dump.
+# Without this the packager generates its own CHANGELOG.md from commits since the
+# last tag and that is what users see on CurseForge/Wago/WoWI.
+#
+# CHANGELOG.md is deliberately absent from the ignore list below. The packager
+# reads the manual changelog from the checkout, so uploads would work either way,
+# but if the file is ignored it never lands in the package dir and the release
+# zip ships with no changelog at all.
+changelog-title: MilestoneKeys
+manual-changelog:
+  filename: CHANGELOG.md
+  markup-type: markdown
+
 externals:
   Libs/LibStub:              https://repos.curseforge.com/wow/ace3/trunk/LibStub
   Libs/CallbackHandler-1.0:  https://repos.curseforge.com/wow/ace3/trunk/CallbackHandler-1.0
@@ -17,7 +30,6 @@ ignore:
   - docs
   - scripts
   - Build.lua
-  - CHANGELOG.md
   - README.md
   - ROADMAP.md
   - .pkgmeta

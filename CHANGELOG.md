@@ -6,6 +6,9 @@
 ### Changed
 - TOC `## Interface` bumped `120005` → `120100` for patch 12.1.0 (Midnight, The Curse of Ula'tek). Addon no longer flags as out-of-date.
 
+### Fixed
+- Release changelog now shows these curated notes instead of a raw commit dump. `.pkgmeta` gained a `manual-changelog` directive pointing at `CHANGELOG.md`, and `CHANGELOG.md` was dropped from the `ignore` list so the curated file also ships inside the release zip. Every release through v1.1.2 shipped a packager-generated commit log.
+
 ### Notes
 - **No dungeon data changes were needed for the Season 2 keystone pool.** MilestoneKeys hardcodes no instance IDs, map IDs, or season lists. The pool is resolved at runtime in three places, all of which pick up new dungeons automatically:
   - `UI.lua` `BuildDungeonList()` — `C_ChallengeMode.GetMapTable()`, rebuilt each time the options panel opens.
