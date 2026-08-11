@@ -1,8 +1,8 @@
-## Interface: 120005
+## Interface: 120100
 ## Title: MilestoneKeys
 ## Notes: Set force % milestones for Mythic+ dungeons and get alerts as you progress
 ## Author: You
-## Version: 1.1.2
+## Version: 1.1.3
 
 ## X-Curse-Project-ID: 1546520
 ## SavedVariables: MilestoneKeysDB

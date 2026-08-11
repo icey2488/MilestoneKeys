@@ -2,6 +2,22 @@
 
 ## [Unreleased]
 
+## [1.1.3] - 2026-08-11
+### Changed
+- TOC `## Interface` bumped `120005` → `120100` for patch 12.1.0 (Midnight, The Curse of Ula'tek). Addon no longer flags as out-of-date.
+
+### Notes
+- **No dungeon data changes were needed for the Season 2 keystone pool.** MilestoneKeys hardcodes no instance IDs, map IDs, or season lists. The pool is resolved at runtime in three places, all of which pick up new dungeons automatically:
+  - `UI.lua` `BuildDungeonList()` — `C_ChallengeMode.GetMapTable()`, rebuilt each time the options panel opens.
+  - `Core.lua` `GetCurrentDungeonContext()` — same call, matching `GetInstanceInfo()` against `GetMapUIInfo()`.
+  - `Predict.lua` `GetMDTDungeonIdx()` — resolves `challengeMapID` → MDT `dungeonIdx` by lookup; MDT owns route and forces data.
+
+  Season 2 pool for reference: Altar of Fangs, Murder Row, Den of Nalorakk, The Blinding Vale, Voidscar Arena (Midnight); King's Rest, Temple of Sethraliss (BfA); Ruby Life Pools (Dragonflight).
+
+### Known issues
+- Per-dungeon milestone profiles are keyed by `challengeMapID` in SavedVariables. Profiles for dungeons that rotate out of the pool persist but disappear from the "Editing profile for" dropdown, so they can no longer be edited or cleared. Accumulates one season's worth of orphans per rotation.
+- `Core.lua` in-instance detection compares `GetInstanceInfo()` to `GetMapUIInfo()` by exact string. Needs an in-game check against the new 12.1 instances (Altar of Fangs in particular) to confirm the two names still match.
+
 ## [1.1.2] - 2026-05-17
 ### Added
 - Options panel opacity slider (Appearance group): fades the backdrop only, leaving all widgets fully opaque. Saved to `db.profile.options.panelOpacity`.
