@@ -100,12 +100,18 @@ Set in repository Settings → Secrets and variables → Actions. Only `CF_API_K
 is needed for CurseForge; the rest are optional and their upload steps are
 skipped if absent.
 
-| Secret | Purpose |
-|---|---|
-| `CF_API_KEY` | CurseForge upload (project ID comes from `X-Curse-Project-ID` in the TOC) |
-| `GITHUB_TOKEN` | Provided automatically; creates the GitHub release |
-| `WAGO_API_TOKEN` | Wago upload |
-| `WOWI_API_TOKEN` | WoWInterface upload |
+| Secret | Purpose | Also requires |
+|---|---|---|
+| `CF_API_KEY` | CurseForge upload | `## X-Curse-Project-ID` in the TOC (present) |
+| `GITHUB_TOKEN` | Provided automatically; creates the GitHub release | — |
+| `WAGO_API_TOKEN` | Wago upload | `## X-Wago-ID` in the TOC (not set) |
+| `WOWI_API_TOKEN` | WoWInterface upload | `## X-WoWI-ID` in the TOC (not set) |
+
+A token without its matching TOC ID does nothing: `release.sh` guards each
+upload on the ID and returns silently when it is absent — no error, no log
+line. The workflow currently passes the Wago and WoWI tokens anyway so that
+publishing there later is a one-line TOC change (create the project on the
+site, add its ID line, set the secret). Until then those env lines are inert.
 
 ---
 

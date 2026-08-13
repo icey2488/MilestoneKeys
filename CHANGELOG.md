@@ -5,6 +5,7 @@
 ## [1.1.3] - 2026-08-11
 ### Changed
 - TOC `## Interface` bumped `120005` → `120100` for patch 12.1.0 (Midnight, The Curse of Ula'tek). Addon no longer flags as out-of-date.
+- TOC `## Author` fixed from the scaffold placeholder "You" to "icey2488".
 
 ### Fixed
 - Release changelog now shows these curated notes instead of a raw commit dump. `.pkgmeta` gained a `manual-changelog` directive pointing at `CHANGELOG.md`, and `CHANGELOG.md` was dropped from the `ignore` list so the curated file also ships inside the release zip. Every release through v1.1.2 shipped a packager-generated commit log.
