@@ -1,6 +1,6 @@
 # MilestoneKeys Changelog
 
-## [Unreleased]
+## [1.2.0] - 2026-10-11
 ### Added
 - A keystone reroll reminder feature. After a timed Mythic+ run completed on someone else's key (not the player's own), where the completed key's level is >= the level of the key currently in the player's bags, the addon reminds the player that Lindormi can reroll their own keystone before they leave. Reminder-only; the addon never automates or interacts with the Lindormi NPC gossip.
 - New profile defaults: `rerollReminder = { enabled = true, sound = true }`.
