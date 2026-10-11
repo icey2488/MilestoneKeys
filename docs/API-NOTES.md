@@ -274,3 +274,40 @@ that circumvent restricted APIs or depend on third-party data scrapers.
 BigWigs, DBM, and MDT all continue development with Midnight-compatible
 versions. The built-in Cooldown Manager is one of the few sanctioned
 combat-audio-cue sources in the new environment.
+
+---
+
+## 7. Keystone Reroll Reminder
+
+After a timed Mythic+ run, Lindormi offers to reroll the player's **own**
+keystone to a different dungeon at the same level, but only if (a) the
+completed key was not the player's own key, and (b) the completed key's
+level was `>=` the level of the key in the player's bags.
+
+### Ownership detection approach
+
+There is no direct "is this your key" API. The addon snapshots
+`C_MythicPlus.GetOwnedKeystoneLevel()` and
+`C_MythicPlus.GetOwnedKeystoneChallengeMapID()` at `CHALLENGE_MODE_START`. On
+`CHALLENGE_MODE_COMPLETED`, it re-reads the same two calls and compares
+against the snapshot — if either value changed, the completed key **was**
+the player's own key (it got upgraded in place), so no reminder fires.
+
+### The 2-second delay gotcha
+
+`C_Timer.After(2, ...)` runs before re-reading the owned keystone on
+`CHALLENGE_MODE_COMPLETED`, because the bag keystone item does not update
+immediately when the event fires — reading it synchronously in the event
+handler would see stale data.
+
+### Snapshot persistence
+
+The snapshot is persisted to `db.profile.rerollSnapshot` rather than a plain
+in-memory local, specifically so a `/reload` mid-key does not lose it. It is
+validated against `C_ChallengeMode.GetActiveChallengeMapID()` at evaluation
+time, then cleared (one-shot) regardless of outcome.
+
+### Reminder-only
+
+This feature never automates or clicks through the Lindormi NPC gossip
+options — it only surfaces a local chat/HUD/sound reminder.

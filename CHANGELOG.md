@@ -1,6 +1,12 @@
 # MilestoneKeys Changelog
 
 ## [Unreleased]
+### Added
+- A keystone reroll reminder feature. After a timed Mythic+ run completed on someone else's key (not the player's own), where the completed key's level is >= the level of the key currently in the player's bags, the addon reminds the player that Lindormi can reroll their own keystone before they leave. Reminder-only; the addon never automates or interacts with the Lindormi NPC gossip.
+- New profile defaults: `rerollReminder = { enabled = true, sound = true }`.
+- New standalone checkboxes in the Behavior settings group: "Keystone reroll reminder" (full width) and a child "Play sound" checkbox that disables when the parent is off.
+- New slash subcommand `/mk reroll test` fires a sample reminder so HUD text and sound can be verified without completing a real key.
+- Output is local only: chat print, the existing on-screen alert frame, and the selected alert sound. Never sent to the party (Midnight restricts addon chat inside instances).
 
 ## [1.1.3] - 2026-08-11
 ### Changed

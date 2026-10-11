@@ -24,6 +24,10 @@ local DB_DEFAULTS = {
         alertSound  = "alarm",
         chatOutput  = true,
         frameAlerts = true,
+        rerollReminder = {
+            enabled = true,
+            sound   = true,
+        },
         options = {
             minimapEnabled     = true,
             perDungeonProfiles = false,
@@ -102,6 +106,12 @@ end
 function MK:CHALLENGE_MODE_COMPLETED()
     State.active = false
     MK_HUD_OnRunEnd()
+
+    -- Bag keystone item updates slightly after this event fires; wait for it
+    -- to settle before reading C_MythicPlus.GetOwnedKeystone*() again.
+    C_Timer.After(2, function()
+        MK:EvaluateRerollReminder()
+    end)
 end
 
 function MK:CHALLENGE_MODE_RESET()
@@ -110,6 +120,7 @@ function MK:CHALLENGE_MODE_RESET()
     wipe(State.triggered)
     State.lastPct = 0
     MK_HUD_OnRunEnd()
+    self.db.profile.rerollSnapshot = nil
 end
 
 function MK:SCENARIO_CRITERIA_UPDATE()
@@ -130,11 +141,72 @@ function MK:InitRun()
     wipe(State.triggered)
     State.lastPct = 0
     self.sessionManualDungeonOverride = false
+    self:CaptureRerollSnapshot()
 
     if State.forcesIndex then
         self:EvaluateForces()
     end
     MK_HUD_OnRunStart()
+end
+
+-- -------------------------------------------------------
+-- Keystone reroll reminder
+--
+-- Lindormi offers to reroll the player's own keystone after a timed run,
+-- but only if the completed key belonged to someone else and its level
+-- was >= the level of the key currently in the player's bags. See
+-- docs/API-NOTES.md for the snapshot/ownership detection rationale.
+-- -------------------------------------------------------
+function MK:CaptureRerollSnapshot()
+    local level = C_MythicPlus.GetOwnedKeystoneLevel()
+    local mapID = C_MythicPlus.GetOwnedKeystoneChallengeMapID()
+
+    if level and mapID then
+        self.db.profile.rerollSnapshot = {
+            level       = level,
+            mapID       = mapID,
+            activeMapID = C_ChallengeMode.GetActiveChallengeMapID(),
+        }
+    else
+        self.db.profile.rerollSnapshot = nil
+    end
+end
+
+function MK:EvaluateRerollReminder()
+    local snap = self.db.profile.rerollSnapshot
+    if not snap then return end
+
+    -- One-shot: whatever the outcome, this snapshot has now been evaluated.
+    self.db.profile.rerollSnapshot = nil
+
+    if not snap.activeMapID or snap.activeMapID ~= C_ChallengeMode.GetActiveChallengeMapID() then
+        return
+    end
+
+    local opts = self.db.profile.rerollReminder
+    if not opts or not opts.enabled then return end
+
+    local info = C_ChallengeMode.GetChallengeCompletionInfo()
+    if not info or not info.onTime or info.practiceRun then return end
+
+    -- Re-read the owned key. If it moved from the snapshot, the completed
+    -- key was the player's own (it just got upgraded) -- no reroll offer.
+    local ownedLevel = C_MythicPlus.GetOwnedKeystoneLevel()
+    local ownedMapID = C_MythicPlus.GetOwnedKeystoneChallengeMapID()
+    if ownedLevel ~= snap.level or ownedMapID ~= snap.mapID then
+        return
+    end
+
+    if info.level < snap.level then return end
+
+    local completedName = C_ChallengeMode.GetMapUIInfo(snap.activeMapID)
+    local ownedName     = C_ChallengeMode.GetMapUIInfo(snap.mapID)
+
+    MK_ShowRerollReminder(string.format(
+        "Timed +%d %s. You can reroll your +%d %s at Lindormi before you leave.",
+        info.level, completedName or "dungeon",
+        snap.level, ownedName or "your key"
+    ))
 end
 
 -- -------------------------------------------------------

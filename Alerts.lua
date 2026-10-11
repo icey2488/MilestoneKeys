@@ -255,3 +255,27 @@ function MK_TriggerAlert(milestone, currentPct, keystoneLevel, quantity, total)
         f.anim:Play()
     end
 end
+
+-- -------------------------------------------------------
+-- Keystone reroll reminder (standalone; not a milestone alert)
+--
+-- Always prints to chat and flashes the existing on-screen alert frame;
+-- sound is gated by its own toggle. Local-only -- never sent to the party.
+-- -------------------------------------------------------
+function MK_ShowRerollReminder(message)
+    local MK      = _G["MilestoneKeys"]
+    local profile = MK.db.profile
+    local opts    = profile.rerollReminder or {}
+
+    print("|cffF5B80E[MilestoneKeys]|r " .. message)
+
+    local f = GetAlertFrame()
+    f.title:SetText("Keystone Reroll Available")
+    f.sub:SetText(message)
+    f.anim:Stop()
+    f.anim:Play()
+
+    if opts.sound then
+        MK_PlaySound(profile.alertSound)
+    end
+end

@@ -57,17 +57,20 @@ function MK_UI_Init(MK)
     SLASH_MILESTONEKEYS1 = "/mk"
     SLASH_MILESTONEKEYS2 = "/milestonekeys"
     SlashCmdList["MILESTONEKEYS"] = function(arg)
-        if arg == "test" then
+        local cmd, rest = arg:match("^(%S*)%s*(.-)$")
+        if cmd == "test" then
             local kLevel = MK:GetKeystoneLevel()
             MK_TriggerAlert(
                 { label = "Test Alert", alertType = "sound_chat_frame" },
                 42.7,
                 kLevel > 0 and kLevel or 10
             )
-        elseif arg == "" then
+        elseif cmd == "reroll" and rest == "test" then
+            MK_ShowRerollReminder("Timed +12 Ara-Kara. You can reroll your +11 Priory at Lindormi before you leave.")
+        elseif cmd == "" then
             MK_UI_Toggle(MK)
         else
-            print("|cffF5B80E[MilestoneKeys]|r Unknown command '|cffFFFFFF" .. arg .. "|r'. Use |cffFFFFFF/mk test|r or |cffFFFFFF/mk|r.")
+            print("|cffF5B80E[MilestoneKeys]|r Unknown command '|cffFFFFFF" .. arg .. "|r'. Use |cffFFFFFF/mk test|r, |cffFFFFFF/mk reroll test|r, or |cffFFFFFF/mk|r.")
         end
     end
 end
@@ -670,6 +673,31 @@ local function BuildPanel(MK)
     end)
     behaviorGroup:AddChild(minimapChk)
     AddTooltip(minimapChk, "Minimap Button", "Toggle the MilestoneKeys icon on the minimap.")
+
+    local rerollSoundChk  -- forward-declared so rerollChk's callback can reference it
+
+    local rerollChk = AG:Create("CheckBox")
+    rerollChk:SetLabel("Keystone reroll reminder")
+    rerollChk:SetFullWidth(true)
+    rerollChk:SetValue(MK.db.profile.rerollReminder.enabled)
+    rerollChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.rerollReminder.enabled = val
+        rerollSoundChk:SetDisabled(not val)
+    end)
+    behaviorGroup:AddChild(rerollChk)
+    AddTooltip(rerollChk, "Keystone Reroll Reminder",
+        "After a timed run on someone else's key, remind you to reroll your own key at Lindormi if the completed level was at or above yours.")
+
+    rerollSoundChk = AG:Create("CheckBox")
+    rerollSoundChk:SetLabel("Play sound")
+    rerollSoundChk:SetWidth(160)
+    rerollSoundChk:SetValue(MK.db.profile.rerollReminder.sound)
+    rerollSoundChk:SetDisabled(not MK.db.profile.rerollReminder.enabled)
+    rerollSoundChk:SetCallback("OnValueChanged", function(_, _, val)
+        MK.db.profile.rerollReminder.sound = val
+    end)
+    behaviorGroup:AddChild(rerollSoundChk)
+    AddTooltip(rerollSoundChk, "Play Sound", "Play the selected alert sound when the reroll reminder fires.")
 
     -- ── Bottom row (outside groups) ───────────────────────
     local sep4 = AG:Create("Heading")
